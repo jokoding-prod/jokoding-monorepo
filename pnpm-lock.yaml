@@ -17,6 +17,9 @@ importers:
       '@hono/node-server':
         specifier: ^2.1.8
         version: 2.1.8(hono@4.13.19)
+      '@jokoding/invoice-core':
+        specifier: workspace:*
+        version: link:../../packages/invoice-core
       hono:
         specifier: ^4.13.19
         version: 4.13.19
