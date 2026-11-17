@@ -1,4 +1,4 @@
-// Pure invoice logic: no DOM, no storage. Tested in tests/calc.test.mjs.
+// Pure invoice logic: no DOM, no storage. Tested in test/calc.test.js.
 
 const ROMAN = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X", "XI", "XII"];
 const NUMBER_PATTERN = /^INV-(\d+)\/JKD\/[IVX]+\/(\d{4})$/i;

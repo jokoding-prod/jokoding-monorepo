@@ -29,3 +29,15 @@ test("invoiceDraftFromOrder without bank leaves bank fields empty", () => {
   assert.equal(d.accountNumber, "");
   assert.equal(d.accountHolder, "");
 });
+
+test("invoiceDraftFromOrder normalises a Date deadline to local YYYY-MM-DD", () => {
+  const d = invoiceDraftFromOrder({ ...order, deadline: new Date(2026, 10, 30) }, null, new Date(2026, 10, 16));
+  assert.equal(d.dueDate, "2026-11-30");
+});
+
+test("invoiceDraftFromOrder turns null deadline, scope and phone into empty strings", () => {
+  const d = invoiceDraftFromOrder({ ...order, deadline: null, scope_of_work: null, client_phone: null }, null, new Date(2026, 10, 16));
+  assert.equal(d.dueDate, "");
+  assert.equal(d.notes, "");
+  assert.equal(d.clientPhone, "");
+});

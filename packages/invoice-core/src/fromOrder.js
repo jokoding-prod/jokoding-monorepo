@@ -1,10 +1,12 @@
 const pad = (n) => String(n).padStart(2, "0");
 const localIsoDate = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 
+const dueDateOf = (d) => (d instanceof Date ? localIsoDate(d) : d ?? "");
+
 export function invoiceDraftFromOrder(order, bank, today) {
   return {
     date: localIsoDate(today),
-    dueDate: order.deadline ?? "",
+    dueDate: dueDateOf(order.deadline),
     client: order.client_name ?? "",
     clientPhone: order.client_phone ?? "",
     items: [{ name: order.project_name ?? "", quantity: 1, price: Number(order.price) || 0 }],
