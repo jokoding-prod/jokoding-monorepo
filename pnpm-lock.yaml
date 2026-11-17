@@ -112,6 +112,8 @@ importers:
 
   packages/config: {}
 
+  packages/invoice-core: {}
+
 packages:
 
   '@babel/code-frame@7.29.7':
