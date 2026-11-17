@@ -5,11 +5,15 @@ import pg from 'pg';
 
 // DATE (OID 1082) stays a raw 'YYYY-MM-DD' string to avoid timezone shifts.
 pg.types.setTypeParser(1082, (v) => v);
+// BIGINT (OID 20) -> number (rupiah stays well below 2^53).
+pg.types.setTypeParser(20, Number);
 
 const MIGRATIONS_DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'migrations');
 
 export function createPool(databaseUrl, opts = {}) {
-  return new pg.Pool({ connectionString: databaseUrl, ...opts });
+  const pool = new pg.Pool({ connectionString: databaseUrl, ...opts });
+  pool.on('error', (err) => console.error('pg pool error:', err));
+  return pool;
 }
 
 export async function migrate(pool) {
