@@ -5,7 +5,7 @@ const KEYLEN = 64;
 
 function derive(plain, salt, n) {
   return new Promise((resolve, reject) => {
-    scrypt(plain, salt, KEYLEN, { N: n }, (err, key) => (err ? reject(err) : resolve(key)));
+    scrypt(plain, salt, KEYLEN, { N: n, maxmem: 128 * n * 8 * 2 }, (err, key) => (err ? reject(err) : resolve(key)));
   });
 }
 
@@ -21,6 +21,11 @@ export async function verifyPassword(plain, stored) {
   const n = Number(parts[1]);
   if (!Number.isInteger(n) || n < 2 || n > 1 << 16) return false;
   const expected = Buffer.from(parts[3], 'base64');
-  const actual = await derive(plain, Buffer.from(parts[2], 'base64'), n);
+  let actual;
+  try {
+    actual = await derive(plain, Buffer.from(parts[2], 'base64'), n);
+  } catch {
+    return false;
+  }
   return expected.length === actual.length && timingSafeEqual(expected, actual);
 }

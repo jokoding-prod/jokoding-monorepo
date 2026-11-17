@@ -6,6 +6,7 @@
 // Password is prompted without echo. For scripts/tests set INTERNAL_PASSWORD to skip the prompt.
 import { fileURLToPath } from 'node:url';
 import { createInterface } from 'node:readline';
+import { Writable } from 'node:stream';
 import { createPool, migrate } from './db.js';
 import { hashPassword } from './password.js';
 
@@ -74,24 +75,40 @@ export const commands = {
 
   async deactivate(pool, args) {
     if (args.length !== 1) throw usage('deactivate');
-    const { rows } = await pool.query('update users set active = false where username = $1 returning id', [args[0]]);
-    if (!rows[0]) throw new Error(`User "${args[0]}" tidak ditemukan`);
-    await pool.query('delete from sessions where user_id = $1', [rows[0].id]);
+    const client = await pool.connect();
+    try {
+      await client.query('begin');
+      const { rows } = await client.query('update users set active = false where username = $1 returning id', [args[0]]);
+      if (!rows[0]) throw new Error(`User "${args[0]}" tidak ditemukan`);
+      await client.query('delete from sessions where user_id = $1', [rows[0].id]);
+      await client.query('commit');
+    } catch (err) {
+      await client.query('rollback').catch(() => {});
+      throw err;
+    } finally {
+      client.release();
+    }
     return `user "${args[0]}" dinonaktifkan`;
   },
 };
 
 function promptHidden(question) {
   return new Promise((resolve) => {
-    const rl = createInterface({ input: process.stdin, output: process.stdout, terminal: true });
-    rl._writeToOutput = (s) => {
-      if (s.includes(question)) rl.output.write(s);
-    };
+    let muted = false;
+    const output = new Writable({
+      write(chunk, _enc, cb) {
+        if (!muted) process.stdout.write(chunk);
+        cb();
+      },
+    });
+    const rl = createInterface({ input: process.stdin, output, terminal: true });
     rl.question(question, (answer) => {
-      rl.output.write('\n');
+      muted = false;
+      process.stdout.write('\n');
       rl.close();
       resolve(answer);
     });
+    muted = true;
   });
 }
 

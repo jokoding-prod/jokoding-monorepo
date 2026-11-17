@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { freshDb, skipReason } from './helpers.js';
@@ -114,6 +115,20 @@ test('expired session -> 401', { skip: skipReason }, async () => {
     const cookie = cookieOf(await login(app, 'member1', 'pw-member1'));
     await pool.query(`update sessions set expires_at = now() - interval '1 minute'`);
     assert.equal((await app.request('/api/auth/me', { headers: { cookie } })).status, 401);
+  } finally {
+    await cleanup();
+  }
+});
+
+test('stored sessions.id is sha256 of the cookie value, not the cookie value', { skip: skipReason }, async () => {
+  const { app, pool, cleanup } = await setup();
+  try {
+    const cookie = cookieOf(await login(app, 'member1', 'pw-member1'));
+    const raw = cookie.split('=')[1];
+    const { rows } = await pool.query('select id from sessions');
+    assert.equal(rows.length, 1);
+    assert.notEqual(rows[0].id, raw);
+    assert.equal(rows[0].id, createHash('sha256').update(raw).digest('hex'));
   } finally {
     await cleanup();
   }

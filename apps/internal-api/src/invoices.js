@@ -163,7 +163,7 @@ export function invoicesRoutes() {
         if (err.code !== '23505') throw err;
         if (err.constraint === 'invoices_order_id_key') return c.json(ORDER_TAKEN, 409);
         if (err.constraint !== 'invoices_number_key') throw err;
-        if (!auto || attempt >= 1) return c.json(NUMBER_TAKEN, 409);
+        if (!auto || attempt >= 3) return c.json(NUMBER_TAKEN, 409);
         number = await suggestNumber(pool);
       }
     }

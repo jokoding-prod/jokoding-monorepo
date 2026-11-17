@@ -15,15 +15,26 @@ export async function freshDb() {
   await admin.query(`CREATE SCHEMA ${schema}`);
   await admin.end();
   const pool = createPool(TEST_DATABASE_URL, { options: `-c search_path=${schema}` });
-  await migrate(pool);
+  const drop = async () => {
+    const c = new pg.Client({ connectionString: TEST_DATABASE_URL });
+    await c.connect();
+    await c.query(`DROP SCHEMA ${schema} CASCADE`);
+    await c.end();
+  };
+  let applied;
+  try {
+    applied = await migrate(pool);
+  } catch (err) {
+    await pool.end().catch(() => {});
+    await drop().catch(() => {});
+    throw err;
+  }
   return {
     pool,
+    applied,
     async cleanup() {
       await pool.end();
-      const c = new pg.Client({ connectionString: TEST_DATABASE_URL });
-      await c.connect();
-      await c.query(`DROP SCHEMA ${schema} CASCADE`);
-      await c.end();
+      await drop();
     },
   };
 }

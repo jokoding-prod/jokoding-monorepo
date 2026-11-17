@@ -34,7 +34,7 @@ async function setup() {
   };
   const addInvoice = (orderId) =>
     db.pool.query(`insert into invoices(order_id, number, data) values($1,$2,'{}')`, [orderId, `INV-${orderId}/JKD/XI/2026`]);
-  return { ...db, app, ids, call, create, addInvoice, base };
+  return { ...db, app, ids, cookies, call, create, addInvoice, base };
 }
 
 const wrap = (fn) => async () => {
@@ -101,6 +101,8 @@ t('POST validation: required, dates, lengths, assignee, statuses', async ({ call
   await bad({ assigneeId: 9999 });
   await bad({ assigneeId: ids.gone });
   await bad({ assigneeId: 'abc' });
+  await bad({ assigneeId: '12x' });
+  await bad({ assigneeId: '' });
   assert.equal((await call('ma', 'POST', '/api/orders', { ...base, projectName: 'x'.repeat(200), scopeOfWork: 'y'.repeat(5000) })).status, 201);
   const res = await call('ma', 'POST', '/api/orders', 'not-json-object');
   assert.equal(res.status, 400);
@@ -251,7 +253,7 @@ t('member GET of invoiced order exposes no invoice number; admin does', async ({
   assert.equal(a.invoice.number, `INV-${o.id}/JKD/XI/2026`);
 });
 
-t('member PATCH UPDATE is guarded against an invoice created after the pre-check', async ({ pool, create, call }) => {
+t('member PATCH UPDATE is guarded against an invoice created after the pre-check', async ({ pool, create, call, cookies }) => {
   const o = await create('ma');
   const racing = {
     query(text, params) {
@@ -264,12 +266,9 @@ t('member PATCH UPDATE is guarded against an invoice created after the pre-check
     },
   };
   const app2 = createApp({ pool: racing, config });
-  const { rows } = await pool.query(
-    `select s.id from sessions s join users u on u.id = s.user_id where u.username = 'ma' limit 1`,
-  );
   const res = await app2.request(`/api/orders/${o.id}`, {
     method: 'PATCH',
-    headers: { cookie: `jki_session=${rows[0].id}`, 'content-type': 'application/json' },
+    headers: { cookie: cookies.ma, 'content-type': 'application/json' },
     body: JSON.stringify({ projectName: 'hacked' }),
   });
   assert.equal(res.status, 403);
@@ -298,4 +297,28 @@ t('CSRF: foreign Origin 403, text/plain 415, right Origin ok, no Origin ok', asy
   assert.equal(res.status, 403);
   res = await app.request('/api/auth/logout', { method: 'POST', headers: { cookie: ck, origin: 'https://x.test' } });
   assert.equal(res.status, 204);
+});
+
+t('assigneeId accepts a digit-only string', async ({ create, call, ids }) => {
+  const o = await create('ma', { assigneeId: String(ids.mb) });
+  assert.equal(o.assignee.id, ids.mb);
+  const r = await (await call('ma', 'PATCH', `/api/orders/${o.id}`, { assigneeId: String(ids.ma) })).json();
+  assert.equal(r.assignee.id, ids.ma);
+});
+
+t('admin PATCH of an order deleted mid-request -> 404, not 403', async ({ create, pool, cookies }) => {
+  const o = await create('ma');
+  const racing = {
+    query(text, params) {
+      if (/^\s*update orders/i.test(text)) return pool.query('delete from orders where id = $1', [o.id]).then(() => pool.query(text, params));
+      return pool.query(text, params);
+    },
+  };
+  const res = await createApp({ pool: racing, config }).request(`/api/orders/${o.id}`, {
+    method: 'PATCH',
+    headers: { cookie: cookies.admin1, 'content-type': 'application/json' },
+    body: JSON.stringify({ projectName: 'x' }),
+  });
+  assert.equal(res.status, 404);
+  assert.deepEqual(await res.json(), { error: 'Order tidak ditemukan' });
 });

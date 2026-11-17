@@ -1,7 +1,10 @@
 import { Hono } from 'hono';
 import { getCookie, setCookie, deleteCookie } from 'hono/cookie';
-import { randomBytes } from 'node:crypto';
+import { createHash, randomBytes } from 'node:crypto';
 import { verifyPassword, hashPassword } from './password.js';
+
+// Only sha256(id) is stored; the cookie carries the raw id.
+export const hashSid = (sid) => createHash('sha256').update(sid).digest('hex');
 
 export const COOKIE_NAME = 'jki_session';
 const SESSION_SECONDS = 30 * 24 * 3600;
@@ -76,7 +79,7 @@ export async function requireUser(c, next) {
       `select u.id, u.name, u.username, u.role
          from sessions s join users u on u.id = s.user_id
         where s.id = $1 and s.expires_at > now() and u.active`,
-      [sid],
+      [hashSid(sid)],
     );
     if (rows[0]) {
       c.set('user', publicUser(rows[0]));
@@ -120,7 +123,7 @@ export function authRoutes({ pool, config }) {
     limiter.release(userKey);
     const sid = randomBytes(32).toString('base64url');
     await pool.query('insert into sessions(id, user_id, expires_at) values($1,$2, now() + $3 * interval \'1 second\')', [
-      sid,
+      hashSid(sid),
       u.id,
       SESSION_SECONDS,
     ]);
@@ -130,7 +133,7 @@ export function authRoutes({ pool, config }) {
 
   r.post('/logout', async (c) => {
     const sid = getCookie(c, COOKIE_NAME);
-    if (sid) await pool.query('delete from sessions where id = $1', [sid]);
+    if (sid) await pool.query('delete from sessions where id = $1', [hashSid(sid)]);
     deleteCookie(c, COOKIE_NAME, cookieOpts(config));
     return c.body(null, 204);
   });

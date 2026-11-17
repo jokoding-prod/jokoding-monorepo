@@ -16,30 +16,40 @@ export function createPool(databaseUrl, opts = {}) {
   return pool;
 }
 
+const MIGRATION_LOCK_KEY = 727401; // arbitrary constant: serialises migrate() across instances
+
 export async function migrate(pool) {
-  await pool.query(
-    'create table if not exists schema_migrations (name text primary key, applied_at timestamptz not null default now())',
-  );
-  const files = (await readdir(MIGRATIONS_DIR)).filter((f) => f.endsWith('.sql')).sort();
-  const { rows } = await pool.query('select name from schema_migrations');
-  const done = new Set(rows.map((r) => r.name));
-  const applied = [];
-  for (const file of files) {
-    if (done.has(file)) continue;
-    const sql = await readFile(path.join(MIGRATIONS_DIR, file), 'utf8');
-    const client = await pool.connect();
+  const client = await pool.connect();
+  try {
+    // Session-level advisory lock on one connection, so two instances never migrate at once.
+    await client.query('select pg_advisory_lock($1)', [MIGRATION_LOCK_KEY]);
     try {
-      await client.query('begin');
-      await client.query(sql);
-      await client.query('insert into schema_migrations(name) values($1)', [file]);
-      await client.query('commit');
-      applied.push(file);
-    } catch (err) {
-      await client.query('rollback').catch(() => {});
-      throw err;
+      await client.query(
+        'create table if not exists schema_migrations (name text primary key, applied_at timestamptz not null default now())',
+      );
+      const files = (await readdir(MIGRATIONS_DIR)).filter((f) => f.endsWith('.sql')).sort();
+      const { rows } = await client.query('select name from schema_migrations');
+      const done = new Set(rows.map((r) => r.name));
+      const applied = [];
+      for (const file of files) {
+        if (done.has(file)) continue;
+        const sql = await readFile(path.join(MIGRATIONS_DIR, file), 'utf8');
+        try {
+          await client.query('begin');
+          await client.query(sql);
+          await client.query('insert into schema_migrations(name) values($1)', [file]);
+          await client.query('commit');
+          applied.push(file);
+        } catch (err) {
+          await client.query('rollback').catch(() => {});
+          throw err;
+        }
+      }
+      return applied;
     } finally {
-      client.release();
+      await client.query('select pg_advisory_unlock($1)', [MIGRATION_LOCK_KEY]).catch(() => {});
     }
+  } finally {
+    client.release();
   }
-  return applied;
 }

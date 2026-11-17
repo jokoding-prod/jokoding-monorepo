@@ -5,10 +5,17 @@ import { createApp } from './app.js';
 const env = process.env;
 if (!env.DATABASE_URL) throw new Error('DATABASE_URL is required');
 
+function parseBool(value, fallback) {
+  const v = String(value ?? '').trim().toLowerCase();
+  if (['true', '1', 'yes'].includes(v)) return true;
+  if (['false', '0', 'no'].includes(v)) return false;
+  return fallback;
+}
+
 const config = {
   corsOrigin: env.CORS_ORIGIN || 'http://localhost:5173',
   cookieDomain: env.COOKIE_DOMAIN || null,
-  secureCookies: env.SECURE_COOKIES ? env.SECURE_COOKIES === 'true' : env.NODE_ENV === 'production',
+  secureCookies: parseBool(env.SECURE_COOKIES, env.NODE_ENV === 'production'),
 };
 const port = Number(env.PORT || 3300);
 const hostname = env.HOST || '127.0.0.1';

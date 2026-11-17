@@ -76,9 +76,10 @@ function enumVal(v, list, field) {
 
 async function assignee(pool, v) {
   if (v === null || v === undefined) return null;
-  if (typeof v === 'number' && Number.isInteger(v) && v > 0 && v <= MAX_INT) {
-    const { rows } = await pool.query('select 1 from users where id = $1 and active', [v]);
-    if (rows[0]) return v;
+  const id = typeof v === 'number' ? v : typeof v === 'string' && /^\d{1,10}$/.test(v) ? Number(v) : NaN;
+  if (Number.isInteger(id) && id > 0 && id <= MAX_INT) {
+    const { rows } = await pool.query('select 1 from users where id = $1 and active', [id]);
+    if (rows[0]) return id;
   }
   throw new BadRequest('Assignee tidak valid');
 }
@@ -183,7 +184,9 @@ export function ordersRoutes() {
         `update orders set ${sets.join(', ')}, updated_at = now() where id = $${sets.length + 1}${guard}`,
         params,
       );
-      if (!upd.rowCount) return c.json({ error: 'Tidak boleh mengubah order ini' }, 403);
+      if (!upd.rowCount) {
+        return user.role === 'admin' ? c.json(NOT_FOUND, 404) : c.json({ error: 'Tidak boleh mengubah order ini' }, 403);
+      }
     }
     return c.json(toOrder(await load(pool, user, id), user.role === 'admin'));
   });

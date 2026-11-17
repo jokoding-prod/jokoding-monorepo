@@ -171,16 +171,16 @@ t('two orders invoiced concurrently without numbers get distinct numbers', async
   assert.equal(new Set(nums).size, 2);
 });
 
-t('same auto-suggested number from two concurrent drafts retries once', async ({ call, order }) => {
-  const a = await order();
-  const b = await order();
-  const [da, db_] = await Promise.all([a, b].map(async (o) => (await call('admin1', 'GET', `/api/orders/${o.id}/invoice-draft`)).json()));
-  assert.equal(da.number, db_.number);
-  const res = await Promise.all([
-    call('admin1', 'POST', '/api/invoices', { orderId: a.id, number: da.number, autoNumber: true, data: da.draft }),
-    call('admin1', 'POST', '/api/invoices', { orderId: b.id, number: db_.number, autoNumber: true, data: db_.draft }),
-  ]);
-  assert.deepEqual(res.map((r) => r.status), [201, 201]);
+t('same auto-suggested number from three concurrent drafts: all succeed via retry', async ({ call, order }) => {
+  const orders = [await order(), await order(), await order()];
+  const drafts = await Promise.all(orders.map(async (o) => (await call('admin1', 'GET', `/api/orders/${o.id}/invoice-draft`)).json()));
+  assert.equal(new Set(drafts.map((d) => d.number)).size, 1);
+  const res = await Promise.all(
+    orders.map((o, i) => call('admin1', 'POST', '/api/invoices', { orderId: o.id, number: drafts[i].number, autoNumber: true, data: drafts[i].draft })),
+  );
+  assert.deepEqual(res.map((r) => r.status), [201, 201, 201]);
+  const nums = (await Promise.all(res.map((r) => r.json()))).map((i) => i.number);
+  assert.equal(new Set(nums).size, 3);
 });
 
 t('stale draft number with autoNumber gets a fresh number', async ({ call, order }) => {
