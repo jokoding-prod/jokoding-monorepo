@@ -4,6 +4,9 @@ import Shell from './layout/Shell.jsx'
 import Login from './pages/Login.jsx'
 import Beranda from './pages/Beranda.jsx'
 import Placeholder from './pages/Placeholder.jsx'
+import OrdersPage from './orders/OrdersPage.jsx'
+import OrderForm from './orders/OrderForm.jsx'
+import OrderDetail from './orders/OrderDetail.jsx'
 
 function Protected() {
   const { user, loading } = useAuth()
@@ -30,8 +33,10 @@ export default function App() {
         <Route path="/login" element={<LoginRoute />} />
         <Route element={<Protected />}>
           <Route index element={<Beranda />} />
-          <Route path="order" element={<Placeholder title="Order" />} />
-          <Route path="order/:id" element={<Placeholder title="Order" />} />
+          <Route path="order" element={<OrdersPage />} />
+          <Route path="order/new" element={<OrderForm />} />
+          <Route path="order/:id" element={<OrderDetail />} />
+          <Route path="order/:id/edit" element={<OrderForm />} />
           <Route element={<AdminOnly />}>
             <Route path="invoice" element={<Placeholder title="Invoice" />} />
             <Route path="invoice/:id" element={<Placeholder title="Invoice" />} />
