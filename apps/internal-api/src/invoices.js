@@ -3,6 +3,7 @@ import { calcTotals, invoiceDraftFromOrder, nextInvoiceNumber } from '@jokoding/
 import { requireUser, requireAdmin } from './auth.js';
 
 const MAX_INT = 2147483647;
+const MAX_TRIES = 3; // auto-number insert attempts
 const ORDER_TAKEN = { error: 'Order sudah punya invoice' };
 const NUMBER_TAKEN = { error: 'Nomor invoice sudah dipakai' };
 const INVOICE_404 = { error: 'Invoice tidak ditemukan' };
@@ -163,7 +164,7 @@ export function invoicesRoutes() {
         if (err.code !== '23505') throw err;
         if (err.constraint === 'invoices_order_id_key') return c.json(ORDER_TAKEN, 409);
         if (err.constraint !== 'invoices_number_key') throw err;
-        if (!auto || attempt >= 3) return c.json(NUMBER_TAKEN, 409);
+        if (!auto || attempt + 1 >= MAX_TRIES) return c.json(NUMBER_TAKEN, 409);
         number = await suggestNumber(pool);
       }
     }

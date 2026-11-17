@@ -123,6 +123,7 @@ DB_PASS=""
 if [[ -f $ENV_FILE ]]; then
   DB_PASS="$(sed -n 's|^DATABASE_URL=postgres://[^:]*:\([^@]*\)@.*|\1|p' "$ENV_FILE" | head -1)"
 fi
+[[ -z $DB_PASS || $DB_PASS =~ ^[A-Za-z0-9]+$ ]] || die "DB password in $ENV_FILE has unexpected characters (expected letters and digits only)"
 [[ -n $DB_PASS ]] || DB_PASS="$(openssl rand -hex 24)"
 
 # SQL goes through stdin so the password never shows up in `ps`.
@@ -241,7 +242,9 @@ fi
 say "Firewall (ufw): allow SSH, 80, 443. Port $PORT and PostgreSQL stay closed."
 ufw allow OpenSSH >/dev/null 2>&1 || ufw allow 22/tcp >/dev/null
 # sshd on a non-standard port: allow that too, so SSH is never cut.
-ssh_ports="$( { ss -ltnpH 2>/dev/null | awk '/"sshd"/ {n=split($4,a,":"); print a[n]}'; sshd -T 2>/dev/null | awk '/^port /{print $2}'; } | sort -u )"
+sshd_port="$(sshd -T 2>/dev/null | awk '/^port /{print $2}')"
+[[ -n $sshd_port ]] || echo "WARNING: could not read the sshd port with 'sshd -T'; relying on 'ss' only. Check your SSH port before enabling ufw."
+ssh_ports="$( { ss -ltnpH 2>/dev/null | awk '/"sshd"/ {n=split($4,a,":"); print a[n]}'; printf '%s\n' "$sshd_port"; } | grep -E '^[0-9]+$' | sort -u || true )"
 for p in $ssh_ports; do
   ufw allow "$p/tcp" >/dev/null
 done

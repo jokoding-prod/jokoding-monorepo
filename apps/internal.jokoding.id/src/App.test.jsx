@@ -114,4 +114,25 @@ describe('App', () => {
     process.off('unhandledRejection', unhandled)
     expect(unhandled).not.toHaveBeenCalled()
   })
+
+  it.each(['//evil.com/x', '/\\evil.com'])('ignores unsafe return-to %s and lands on /', async (bad) => {
+    let loggedIn = false
+    const me = { id: 1, name: 'Budi', username: 'budi', role: 'admin' }
+    mockFetch({
+      'GET /api/auth/me': () => (loggedIn ? json(200, me) : json(401, { error: 'Belum login' })),
+      'POST /api/auth/login': () => {
+        loggedIn = true
+        return json(200, me)
+      }
+    })
+    render(
+      <MemoryRouter initialEntries={[{ pathname: '/login', state: { from: { pathname: bad, search: '' } } }]}>
+        <App />
+      </MemoryRouter>
+    )
+    await userEvent.type(await screen.findByLabelText('Username'), 'budi')
+    await userEvent.type(screen.getByLabelText('Password'), 'pw')
+    await userEvent.click(screen.getByRole('button', { name: 'Masuk' }))
+    expect(await screen.findByText(/Halo, Budi/)).toBeInTheDocument()
+  })
 })

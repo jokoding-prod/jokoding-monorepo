@@ -9,6 +9,7 @@ function parseBool(value, fallback) {
   const v = String(value ?? '').trim().toLowerCase();
   if (['true', '1', 'yes'].includes(v)) return true;
   if (['false', '0', 'no'].includes(v)) return false;
+  if (v) console.warn(`SECURE_COOKIES="${value}" not recognised (use true/1/yes or false/0/no); using default ${fallback}`);
   return fallback;
 }
 

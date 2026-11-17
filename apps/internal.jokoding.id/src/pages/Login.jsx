@@ -6,7 +6,9 @@ export default function Login() {
   const { user, login } = useAuth()
   const navigate = useNavigate()
   const from = useLocation().state?.from
-  const dest = typeof from?.pathname === 'string' && from.pathname !== '/login' ? `${from.pathname}${from.search || ''}` : '/'
+  const p = from?.pathname
+  const safe = typeof p === 'string' && p.startsWith('/') && !p.startsWith('//') && !p.startsWith('/\\') && p !== '/login'
+  const dest = safe ? `${p}${typeof from.search === 'string' ? from.search : ''}` : '/'
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')

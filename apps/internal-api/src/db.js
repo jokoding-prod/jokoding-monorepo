@@ -20,6 +20,7 @@ const MIGRATION_LOCK_KEY = 727401; // arbitrary constant: serialises migrate() a
 
 export async function migrate(pool) {
   const client = await pool.connect();
+  let unlockFailed = null;
   try {
     // Session-level advisory lock on one connection, so two instances never migrate at once.
     await client.query('select pg_advisory_lock($1)', [MIGRATION_LOCK_KEY]);
@@ -47,9 +48,12 @@ export async function migrate(pool) {
       }
       return applied;
     } finally {
-      await client.query('select pg_advisory_unlock($1)', [MIGRATION_LOCK_KEY]).catch(() => {});
+      await client.query('select pg_advisory_unlock($1)', [MIGRATION_LOCK_KEY]).catch((e) => {
+        unlockFailed = e;
+      });
     }
   } finally {
-    client.release();
+    // A failed unlock may leave the lock held: destroy the connection instead of pooling it.
+    client.release(unlockFailed || undefined);
   }
 }
