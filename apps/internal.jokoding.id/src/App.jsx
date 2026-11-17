@@ -1,0 +1,44 @@
+import { Navigate, Outlet, Route, Routes } from 'react-router-dom'
+import { AuthProvider, useAuth } from './auth/AuthContext.jsx'
+import Shell from './layout/Shell.jsx'
+import Login from './pages/Login.jsx'
+import Beranda from './pages/Beranda.jsx'
+import Placeholder from './pages/Placeholder.jsx'
+
+function Protected() {
+  const { user, loading } = useAuth()
+  if (loading) return <p className="p-6 text-gray-600">Memuat...</p>
+  if (!user) return <Navigate to="/login" replace />
+  return <Shell />
+}
+
+function AdminOnly() {
+  const { user } = useAuth()
+  return user.role === 'admin' ? <Outlet /> : <Navigate to="/" replace />
+}
+
+function LoginRoute() {
+  const { loading } = useAuth()
+  if (loading) return <p className="p-6 text-gray-600">Memuat...</p>
+  return <Login />
+}
+
+export default function App() {
+  return (
+    <AuthProvider>
+      <Routes>
+        <Route path="/login" element={<LoginRoute />} />
+        <Route element={<Protected />}>
+          <Route index element={<Beranda />} />
+          <Route path="order" element={<Placeholder title="Order" />} />
+          <Route path="order/:id" element={<Placeholder title="Order" />} />
+          <Route element={<AdminOnly />}>
+            <Route path="invoice" element={<Placeholder title="Invoice" />} />
+            <Route path="invoice/:id" element={<Placeholder title="Invoice" />} />
+          </Route>
+        </Route>
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </AuthProvider>
+  )
+}
