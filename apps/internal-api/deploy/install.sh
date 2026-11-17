@@ -126,14 +126,10 @@ fi
 [[ -n $DB_PASS ]] || DB_PASS="$(openssl rand -hex 24)"
 
 # SQL goes through stdin so the password never shows up in `ps`.
-runuser -u postgres -- psql -q -v ON_ERROR_STOP=1 >/dev/null <<SQL
-DO \$\$ BEGIN
-  IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = '$DB_USER') THEN
-    CREATE ROLE $DB_USER LOGIN;
-  END IF;
-END \$\$;
-ALTER ROLE $DB_USER WITH LOGIN PASSWORD '$DB_PASS';
-SQL
+printf '%s\n' \
+  "DO \$\$ BEGIN IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = '$DB_USER') THEN CREATE ROLE $DB_USER LOGIN; END IF; END \$\$;" \
+  "ALTER ROLE $DB_USER WITH LOGIN PASSWORD '$DB_PASS';" \
+  | runuser -u postgres -- psql -q -v ON_ERROR_STOP=1 >/dev/null
 if [[ -z $(runuser -u postgres -- psql -tAc "SELECT 1 FROM pg_database WHERE datname = '$DB_NAME'") ]]; then
   runuser -u postgres -- createdb -O "$DB_USER" "$DB_NAME"
 fi
@@ -245,7 +241,8 @@ fi
 say "Firewall (ufw): allow SSH, 80, 443. Port $PORT and PostgreSQL stay closed."
 ufw allow OpenSSH >/dev/null 2>&1 || ufw allow 22/tcp >/dev/null
 # sshd on a non-standard port: allow that too, so SSH is never cut.
-for p in $(ss -ltnpH 2>/dev/null | awk '/"sshd"/ {n=split($4,a,":"); print a[n]}' | sort -u); do
+ssh_ports="$( { ss -ltnpH 2>/dev/null | awk '/"sshd"/ {n=split($4,a,":"); print a[n]}'; sshd -T 2>/dev/null | awk '/^port /{print $2}'; } | sort -u )"
+for p in $ssh_ports; do
   ufw allow "$p/tcp" >/dev/null
 done
 ufw allow 80/tcp >/dev/null

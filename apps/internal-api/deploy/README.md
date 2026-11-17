@@ -45,6 +45,10 @@ Yang dilakukan script (aman dijalankan berulang kali):
 - Pasang site nginx, HTTPS Let's Encrypt (`--redirect`), dan perintah admin `/usr/local/bin/jokoding-internal`.
 - ufw: buka SSH, 80, dan 443. Port 3300 dan 5432 tetap tertutup. Sebelum ufw diaktifkan, script minta konfirmasi bahwa port SSH sudah ada di daftar.
 
+> **Peringatan:** script ini mengubah setting PostgreSQL untuk seluruh cluster (`max_connections=30`, `shared_buffers=256MB`, `work_mem=4MB`, `listen_addresses=localhost`), bukan hanya database `internal`. Sebelum menjalankannya, cek dulu apakah aplikasi lain (misalnya Hermes) memakai PostgreSQL di VPS yang sama, supaya batas koneksi baru tidak mengganggunya.
+>
+> Migrasi sesi `002_hash_sessions.sql` menghapus semua sesi login yang ada, jadi semua pengguna akan logout satu kali setelah update pertama.
+
 Cek dari laptop:
 
 ```bash
