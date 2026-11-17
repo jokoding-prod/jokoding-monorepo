@@ -20,7 +20,7 @@ const SELECT = `
     join users cb on cb.id = o.created_by
     left join invoices i on i.order_id = o.id`;
 
-const toOrder = (r) => ({
+const toOrder = (r, admin) => ({
   id: r.id,
   receivedAt: r.received_at,
   projectName: r.project_name,
@@ -33,7 +33,7 @@ const toOrder = (r) => ({
   createdBy: { id: r.cb_id, name: r.cb_name },
   workStatus: r.work_status,
   paymentStatus: r.payment_status,
-  invoice: r.inv_id == null ? null : { id: r.inv_id, number: r.inv_number },
+  invoice: r.inv_id == null ? null : admin ? { id: r.inv_id, number: r.inv_number } : { exists: true },
 });
 
 const parseId = (s) => (/^\d{1,10}$/.test(s) && Number(s) <= MAX_INT ? Number(s) : null);
@@ -126,13 +126,13 @@ export function ordersRoutes() {
   r.get('/', async (c) => {
     const [cond, params] = visible(c.get('user'));
     const { rows } = await c.get('pool').query(`${SELECT} where ${cond} order by o.received_at desc, o.id desc`, params);
-    return c.json(rows.map(toOrder));
+    return c.json(rows.map((r) => toOrder(r, c.get('user').role === 'admin')));
   });
 
   r.get('/:id', async (c) => {
     const id = parseId(c.req.param('id'));
     const row = id && (await load(c.get('pool'), c.get('user'), id));
-    return row ? c.json(toOrder(row)) : c.json(NOT_FOUND, 404);
+    return row ? c.json(toOrder(row, c.get('user').role === 'admin')) : c.json(NOT_FOUND, 404);
   });
 
   r.post('/', async (c) => {
@@ -151,7 +151,7 @@ export function ordersRoutes() {
       `insert into orders(${cols.join(',')}) values(${cols.map((_, i) => `$${i + 1}`).join(',')}) returning id`,
       cols.map((k) => vals[k]),
     );
-    return c.json(toOrder(await load(pool, user, rows[0].id)), 201);
+    return c.json(toOrder(await load(pool, user, rows[0].id), user.role === 'admin'), 201);
   });
 
   r.patch('/:id', async (c) => {
@@ -174,9 +174,18 @@ export function ordersRoutes() {
     }
     if (sets.length) {
       params.push(id);
-      await pool.query(`update orders set ${sets.join(', ')}, updated_at = now() where id = $${params.length}`, params);
+      let guard = '';
+      if (user.role !== 'admin') {
+        params.push(user.id);
+        guard = ` and created_by = $${params.length} and not exists (select 1 from invoices where order_id = orders.id)`;
+      }
+      const upd = await pool.query(
+        `update orders set ${sets.join(', ')}, updated_at = now() where id = $${sets.length + 1}${guard}`,
+        params,
+      );
+      if (!upd.rowCount) return c.json({ error: 'Tidak boleh mengubah order ini' }, 403);
     }
-    return c.json(toOrder(await load(pool, user, id)));
+    return c.json(toOrder(await load(pool, user, id), user.role === 'admin'));
   });
 
   r.delete('/:id', requireAdmin, async (c) => {

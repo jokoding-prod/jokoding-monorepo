@@ -40,7 +40,7 @@ Yang dilakukan script (aman dijalankan berulang kali):
 - Cek port 3300 kosong, lalu bikin swap 1 GB di `/swapfile` kalau belum ada swap.
 - Install PostgreSQL (16 kalau tersedia), nginx, certbot, dan ufw. Kalau Node.js di bawah versi 20, script akan bertanya dulu sebelum install dari NodeSource.
 - Setting PostgreSQL hemat memori di `conf.d/internal.conf`, lalu bikin role dan database `internal`. Password dibuat acak sekali saja dan tidak pernah ditampilkan.
-- Tulis `/etc/jokoding-internal/env` (mode 640, `root:jokoding-internal`). Isinya `DATABASE_URL`, `PORT=3300`, `HOST=127.0.0.1`, `CORS_ORIGIN`, `COOKIE_DOMAIN=.internal.jokoding.id` (cookie jadi Secure), `TZ=Asia/Jakarta`, dan `NODE_ENV=production`. Nilai yang sudah ada tidak ditimpa.
+- Tulis `/etc/jokoding-internal/env` (mode 640, `root:jokoding-internal`). Isinya `DATABASE_URL`, `PORT=3300`, `HOST=127.0.0.1`, `CORS_ORIGIN`, `COOKIE_DOMAIN=.internal.jokoding.id` `TZ=Asia/Jakarta`, dan `NODE_ENV=production` (cookie jadi Secure; override dengan `SECURE_COOKIES=true` atau `false`). Nilai yang sudah ada tidak ditimpa.
 - Copy app ke `/opt/jokoding-internal`, `pnpm install --prod`, lalu jalankan service `jokoding-internal` sebagai user sistem `jokoding-internal`.
 - Pasang site nginx, HTTPS Let's Encrypt (`--redirect`), dan perintah admin `/usr/local/bin/jokoding-internal`.
 - ufw: buka SSH, 80, dan 443. Port 3300 dan 5432 tetap tertutup. Sebelum ufw diaktifkan, script minta konfirmasi bahwa port SSH sudah ada di daftar.

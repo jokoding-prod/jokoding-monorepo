@@ -181,7 +181,7 @@ t('member PATCH own order after invoice -> 403', async ({ create, call, addInvoi
   assert.equal(res.status, 403);
   assert.deepEqual(await res.json(), { error: 'Tidak boleh mengubah order ini' });
   const got = await (await call('ma', 'GET', `/api/orders/${o.id}`)).json();
-  assert.deepEqual(got.invoice, { id: got.invoice.id, number: `INV-${o.id}/JKD/XI/2026` });
+  assert.deepEqual(got.invoice, { exists: true });
 });
 
 t('member PATCH order only assigned to him (not created) -> 403', async ({ create, call, ids }) => {
@@ -238,4 +238,64 @@ t('GET /api/users/assignable: active users only, any role', async ({ call, ids }
   const list = await res.json();
   assert.deepEqual(list.map((u) => u.id).sort(), [ids.admin1, ids.ma, ids.mb].sort());
   assert.deepEqual(Object.keys(list[0]).sort(), ['id', 'name', 'role']);
+});
+
+t('member GET of invoiced order exposes no invoice number; admin does', async ({ create, call, addInvoice }) => {
+  const o = await create('ma');
+  await addInvoice(o.id);
+  const m = await (await call('ma', 'GET', `/api/orders/${o.id}`)).json();
+  assert.deepEqual(m.invoice, { exists: true });
+  const list = await (await call('ma', 'GET', '/api/orders')).json();
+  assert.deepEqual(list[0].invoice, { exists: true });
+  const a = await (await call('admin1', 'GET', `/api/orders/${o.id}`)).json();
+  assert.equal(a.invoice.number, `INV-${o.id}/JKD/XI/2026`);
+});
+
+t('member PATCH UPDATE is guarded against an invoice created after the pre-check', async ({ pool, create, call }) => {
+  const o = await create('ma');
+  const racing = {
+    query(text, params) {
+      if (/^\s*update orders/i.test(text)) {
+        return pool
+          .query(`insert into invoices(order_id, number, data) values($1,'RACE-1','{}')`, [o.id])
+          .then(() => pool.query(text, params));
+      }
+      return pool.query(text, params);
+    },
+  };
+  const app2 = createApp({ pool: racing, config });
+  const { rows } = await pool.query(
+    `select s.id from sessions s join users u on u.id = s.user_id where u.username = 'ma' limit 1`,
+  );
+  const res = await app2.request(`/api/orders/${o.id}`, {
+    method: 'PATCH',
+    headers: { cookie: `jki_session=${rows[0].id}`, 'content-type': 'application/json' },
+    body: JSON.stringify({ projectName: 'hacked' }),
+  });
+  assert.equal(res.status, 403);
+  assert.deepEqual(await res.json(), { error: 'Tidak boleh mengubah order ini' });
+  const got = await (await call('admin1', 'GET', `/api/orders/${o.id}`)).json();
+  assert.equal(got.projectName, 'P');
+});
+
+t('CSRF: foreign Origin 403, text/plain 415, right Origin ok, no Origin ok', async ({ app, base }) => {
+  const ck = (await app.request('/api/auth/login', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', 'x-real-ip': '9.9.9.9' },
+    body: JSON.stringify({ username: 'ma', password: 'pw' }),
+  })).headers.get('set-cookie').split(';')[0];
+  const post = (headers) =>
+    app.request('/api/orders', { method: 'POST', headers: { cookie: ck, ...headers }, body: JSON.stringify(base) });
+  let res = await post({ origin: 'https://evil.jokoding.id', 'content-type': 'application/json' });
+  assert.equal(res.status, 403);
+  assert.deepEqual(await res.json(), { error: 'forbidden' });
+  res = await post({ 'content-type': 'text/plain' });
+  assert.equal(res.status, 415);
+  assert.deepEqual(await res.json(), { error: 'Content-Type harus application/json' });
+  assert.equal((await post({ origin: 'https://x.test', 'content-type': 'application/json' })).status, 201);
+  assert.equal((await post({ 'content-type': 'application/json' })).status, 201);
+  res = await app.request('/api/auth/logout', { method: 'POST', headers: { cookie: ck, origin: 'https://evil.test' } });
+  assert.equal(res.status, 403);
+  res = await app.request('/api/auth/logout', { method: 'POST', headers: { cookie: ck, origin: 'https://x.test' } });
+  assert.equal(res.status, 204);
 });

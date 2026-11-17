@@ -153,7 +153,7 @@ set_default DATABASE_URL "postgres://$DB_USER:$DB_PASS@127.0.0.1:5432/$DB_NAME"
 set_default PORT "$PORT"
 set_default HOST 127.0.0.1
 set_default CORS_ORIGIN "$CORS_ORIGIN"
-# COOKIE_DOMAIN also turns on Secure cookies (src/main.js).
+# Secure cookies follow NODE_ENV=production unless SECURE_COOKIES=true or false is set (src/main.js).
 set_default COOKIE_DOMAIN "$COOKIE_DOMAIN"
 # Invoice "today" uses the server's local time.
 set_default TZ Asia/Jakarta
