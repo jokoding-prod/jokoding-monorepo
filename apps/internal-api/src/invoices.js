@@ -42,7 +42,8 @@ const toInvoice = (r) => ({ id: r.id, number: r.number, orderId: r.order_id, dat
 function safeTotal(data) {
   try {
     return calcTotals(data).total;
-  } catch {
+  } catch (err) {
+    console.error('invoice total failed:', err);
     return 0;
   }
 }
@@ -146,9 +147,10 @@ export function invoicesRoutes() {
     const { rows: found } = await pool.query('select 1 from orders where id = $1', [orderId]);
     if (!found[0]) return c.json(ORDER_404, 404);
 
-    const suggested = await suggestNumber(pool);
-    const auto = clientNumber === null || clientNumber === suggested;
-    let number = clientNumber ?? suggested;
+    if (body.autoNumber !== undefined && typeof body.autoNumber !== 'boolean') throw new BadRequest('autoNumber tidak valid');
+    // Auto: ignore the client's number and assign one at insert time.
+    const auto = body.autoNumber === true || clientNumber === null;
+    let number = auto ? await suggestNumber(pool) : clientNumber;
     for (let attempt = 0; ; attempt++) {
       try {
         const { rows } = await pool.query(
@@ -160,7 +162,8 @@ export function invoicesRoutes() {
         if (err.code === '23503') return c.json(ORDER_404, 404);
         if (err.code !== '23505') throw err;
         if (err.constraint === 'invoices_order_id_key') return c.json(ORDER_TAKEN, 409);
-        if (err.constraint !== 'invoices_number_key' || !auto || attempt >= 1) return c.json(NUMBER_TAKEN, 409);
+        if (err.constraint !== 'invoices_number_key') throw err;
+        if (!auto || attempt >= 1) return c.json(NUMBER_TAKEN, 409);
         number = await suggestNumber(pool);
       }
     }

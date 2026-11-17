@@ -177,10 +177,33 @@ t('same auto-suggested number from two concurrent drafts retries once', async ({
   const [da, db_] = await Promise.all([a, b].map(async (o) => (await call('admin1', 'GET', `/api/orders/${o.id}/invoice-draft`)).json()));
   assert.equal(da.number, db_.number);
   const res = await Promise.all([
-    call('admin1', 'POST', '/api/invoices', { orderId: a.id, number: da.number, data: da.draft }),
-    call('admin1', 'POST', '/api/invoices', { orderId: b.id, number: db_.number, data: db_.draft }),
+    call('admin1', 'POST', '/api/invoices', { orderId: a.id, number: da.number, autoNumber: true, data: da.draft }),
+    call('admin1', 'POST', '/api/invoices', { orderId: b.id, number: db_.number, autoNumber: true, data: db_.draft }),
   ]);
   assert.deepEqual(res.map((r) => r.status), [201, 201]);
+});
+
+t('stale draft number with autoNumber gets a fresh number', async ({ call, order }) => {
+  const a = await order();
+  const b = await order();
+  const da = await (await call('admin1', 'GET', `/api/orders/${a.id}/invoice-draft`)).json();
+  const db_ = await (await call('admin1', 'GET', `/api/orders/${b.id}/invoice-draft`)).json();
+  assert.equal(da.number, db_.number);
+  const ra = await call('admin1', 'POST', '/api/invoices', { orderId: a.id, number: da.number, autoNumber: true, data: da.draft });
+  assert.equal(ra.status, 201);
+  const rb = await call('admin1', 'POST', '/api/invoices', { orderId: b.id, number: db_.number, autoNumber: true, data: db_.draft });
+  assert.equal(rb.status, 201);
+  assert.notEqual((await rb.json()).number, (await ra.json()).number);
+});
+
+t('autoNumber false with a taken number is a custom conflict', async ({ call, order }) => {
+  const a = await order();
+  const b = await order();
+  const da = await (await call('admin1', 'GET', `/api/orders/${a.id}/invoice-draft`)).json();
+  await call('admin1', 'POST', '/api/invoices', { orderId: a.id, number: da.number, autoNumber: false, data: da.draft });
+  const res = await call('admin1', 'POST', '/api/invoices', { orderId: b.id, number: da.number, autoNumber: false, data: da.draft });
+  assert.equal(res.status, 409);
+  assert.equal((await res.json()).error, 'Nomor invoice sudah dipakai');
 });
 
 t('custom duplicate number gives 409 Nomor invoice sudah dipakai', async ({ call, order }) => {
@@ -205,7 +228,9 @@ t('PUT to existing number gives 409', async ({ call, order }) => {
 t('editing the order afterwards leaves invoice data unchanged', async ({ call, order }) => {
   const o = await order();
   const inv = await (await call('admin1', 'POST', '/api/invoices', { orderId: o.id, data: data() })).json();
-  await call('admin1', 'PATCH', `/api/orders/${o.id}`, { clientName: 'Changed', price: 1 });
+  const patch = await call('admin1', 'PATCH', `/api/orders/${o.id}`, { clientName: 'Changed', price: 1 });
+  assert.equal(patch.status, 200);
+  assert.equal((await (await call('admin1', 'GET', `/api/orders/${o.id}`)).json()).clientName, 'Changed');
   const got = await (await call('admin1', 'GET', `/api/invoices/${inv.id}`)).json();
   assert.equal(got.data.client, 'Budi');
 });
