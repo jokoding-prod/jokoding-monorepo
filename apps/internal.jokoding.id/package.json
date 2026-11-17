@@ -9,6 +9,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@jokoding/invoice-core": "workspace:*",
     "@tailwindcss/vite": "^4.1.18",
     "lucide-react": "^0.563.0",
     "react": "^18.2.0",

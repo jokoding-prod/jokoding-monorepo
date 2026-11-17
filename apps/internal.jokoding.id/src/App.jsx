@@ -3,10 +3,12 @@ import { AuthProvider, useAuth } from './auth/AuthContext.jsx'
 import Shell from './layout/Shell.jsx'
 import Login from './pages/Login.jsx'
 import Beranda from './pages/Beranda.jsx'
-import Placeholder from './pages/Placeholder.jsx'
 import OrdersPage from './orders/OrdersPage.jsx'
 import OrderForm from './orders/OrderForm.jsx'
 import OrderDetail from './orders/OrderDetail.jsx'
+import InvoicesPage from './invoices/InvoicesPage.jsx'
+import InvoiceEditor from './invoices/InvoiceEditor.jsx'
+import InvoiceView from './invoices/InvoiceView.jsx'
 
 function Protected() {
   const { user, loading } = useAuth()
@@ -38,8 +40,10 @@ export default function App() {
           <Route path="order/:id" element={<OrderDetail />} />
           <Route path="order/:id/edit" element={<OrderForm />} />
           <Route element={<AdminOnly />}>
-            <Route path="invoice" element={<Placeholder title="Invoice" />} />
-            <Route path="invoice/:id" element={<Placeholder title="Invoice" />} />
+            <Route path="invoice" element={<InvoicesPage />} />
+            <Route path="invoice/new" element={<InvoiceEditor />} />
+            <Route path="invoice/:id" element={<InvoiceView />} />
+            <Route path="invoice/:id/edit" element={<InvoiceEditor />} />
           </Route>
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
