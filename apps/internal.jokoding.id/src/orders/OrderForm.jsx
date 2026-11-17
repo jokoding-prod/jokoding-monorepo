@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { api } from '../api.js'
 import { useAuth } from '../auth/AuthContext.jsx'
-import { formatRupiah, todayLocal } from '../format.js'
+import { todayLocal } from '../format.js'
 
 const field =
   'mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-base focus:border-green-600 focus:outline-none focus:ring-2 focus:ring-green-500/40 disabled:bg-gray-100'
@@ -25,8 +25,9 @@ function Form({ order }) {
   })
   const [self, setSelf] = useState(isAdmin && originalAssignee === user.id)
   const [assignee, setAssignee] = useState(
-    originalAssignee && originalAssignee !== user.id ? String(originalAssignee) : ''
+    originalAssignee && !(isAdmin && originalAssignee === user.id) ? String(originalAssignee) : ''
   )
+  const [touched, setTouched] = useState(false)
   const [users, setUsers] = useState([])
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
@@ -43,6 +44,9 @@ function Form({ order }) {
 
   const set = (k) => (e) => setF((p) => ({ ...p, [k]: e.target.value }))
   const priceDigits = f.price.replace(/\D/g, '')
+  const asg = order?.assignee
+  const missingAssignee =
+    asg && !(isAdmin && asg.id === user.id) && !users.some((u) => u.id === asg.id) ? asg : null
 
   async function onSubmit(e) {
     e.preventDefault()
@@ -57,8 +61,9 @@ function Form({ order }) {
       price: priceDigits === '' ? '' : Number(priceDigits),
       scopeOfWork: f.scopeOfWork
     }
-    const assigneeId = self ? user.id : assignee ? Number(assignee) : null
-    if (!order || assigneeId !== originalAssignee) body.assigneeId = assigneeId
+    if (!order || touched) {
+      body.assigneeId = self ? user.id : assignee ? Number(assignee) : null
+    }
     try {
       const saved = order
         ? await api(`/api/orders/${order.id}`, { method: 'PATCH', body })
@@ -101,7 +106,7 @@ function Form({ order }) {
           id="price"
           className={field}
           inputMode="numeric"
-          value={priceDigits === '' ? '' : formatRupiah(Number(priceDigits)).slice(2)}
+          value={priceDigits === '' ? '' : new Intl.NumberFormat('id-ID').format(Number(priceDigits))}
           onChange={(e) => setF((p) => ({ ...p, price: e.target.value.replace(/\D/g, '') }))}
           placeholder="0"
           required
@@ -117,17 +122,32 @@ function Form({ order }) {
           id="assignee"
           className={field}
           value={self ? '' : assignee}
-          onChange={(e) => setAssignee(e.target.value)}
+          onChange={(e) => {
+            setTouched(true)
+            setAssignee(e.target.value)
+          }}
           disabled={self}
         >
           <option value="">- Belum ditentukan -</option>
+          {missingAssignee && (
+            <option value={missingAssignee.id} disabled>
+              {missingAssignee.active ? missingAssignee.name : `${missingAssignee.name} (nonaktif)`}
+            </option>
+          )}
           {users.map((u) => (
             <option key={u.id} value={u.id}>{u.name}</option>
           ))}
         </select>
         {isAdmin && (
           <label className="mt-2 flex items-center gap-2 text-sm text-gray-700">
-            <input type="checkbox" checked={self} onChange={(e) => setSelf(e.target.checked)} />
+            <input
+              type="checkbox"
+              checked={self}
+              onChange={(e) => {
+                setTouched(true)
+                setSelf(e.target.checked)
+              }}
+            />
             Saya sendiri (admin)
           </label>
         )}

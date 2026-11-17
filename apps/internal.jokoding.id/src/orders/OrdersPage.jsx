@@ -66,7 +66,15 @@ export default function OrdersPage() {
                   className="cursor-pointer hover:bg-green-50"
                 >
                   <td className="whitespace-nowrap px-3 py-2">{formatTanggal(o.receivedAt)}</td>
-                  <td className="px-3 py-2 font-medium text-gray-900">{o.projectName}</td>
+                  <td className="px-3 py-2 font-medium text-gray-900">
+                    <Link
+                      to={`/order/${o.id}`}
+                      onClick={(e) => e.stopPropagation()}
+                      className="hover:underline focus:underline"
+                    >
+                      {o.projectName}
+                    </Link>
+                  </td>
                   <td className="px-3 py-2">{o.clientName}</td>
                   <td className="whitespace-nowrap px-3 py-2">{formatTanggal(o.deadline)}</td>
                   <td className="whitespace-nowrap px-3 py-2">{formatRupiah(o.price)}</td>

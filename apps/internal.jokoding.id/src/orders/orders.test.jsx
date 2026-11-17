@@ -175,6 +175,77 @@ describe('OrderForm', () => {
   })
 })
 
+describe('OrderForm edit', () => {
+  const adminAssigned = order({ assignee: { id: 1, name: 'Budi', active: true }, createdBy: { id: 3, name: 'Cici' } })
+  const setup = (role, id, o, onPatch) =>
+    mockFetch({
+      ...me(role, id),
+      ...assignable,
+      'GET /api/orders/5': () => json(200, o),
+      'PATCH /api/orders/5': (req) => {
+        onPatch(JSON.parse(req.body))
+        return json(200, o)
+      }
+    })
+
+  it('member editing admin-assigned order does not send assigneeId', async () => {
+    let patched
+    setup('member', 3, adminAssigned, (b) => (patched = b))
+    renderApp('/order/5/edit')
+    const name = await screen.findByLabelText('Nama project')
+    expect(screen.getByLabelText('Dikerjakan oleh')).toHaveDisplayValue('Budi')
+    await userEvent.clear(name)
+    await userEvent.type(name, 'Baru')
+    await userEvent.click(screen.getByRole('button', { name: 'Simpan' }))
+    await waitFor(() => expect(patched).toBeDefined())
+    expect(patched.projectName).toBe('Baru')
+    expect(patched).not.toHaveProperty('assigneeId')
+  })
+
+  it('prefills values and sends the unchanged fields as-is', async () => {
+    let patched
+    setup('admin', 1, order(), (b) => (patched = b))
+    renderApp('/order/5/edit')
+    const name = await screen.findByLabelText('Nama project')
+    expect(name).toHaveValue('Skripsi CV')
+    expect(screen.getByLabelText('Nama klien')).toHaveValue('Siti')
+    expect(screen.getByLabelText('Harga')).toHaveValue('350.000')
+    expect(screen.getByLabelText('Deadline')).toHaveValue('2026-12-01')
+    await userEvent.clear(name)
+    await userEvent.type(name, 'Lain')
+    await userEvent.click(screen.getByRole('button', { name: 'Simpan' }))
+    await waitFor(() => expect(patched).toBeDefined())
+    expect(patched).toEqual({
+      projectName: 'Lain',
+      clientName: 'Siti',
+      clientPhone: '0812',
+      receivedAt: '2026-11-16',
+      deadline: '2026-12-01',
+      price: 350000,
+      scopeOfWork: 'Baris satu\nBaris dua'
+    })
+  })
+
+  it('admin changing assignee sends numeric assigneeId', async () => {
+    let patched
+    setup('admin', 1, order({ assignee: null }), (b) => (patched = b))
+    renderApp('/order/5/edit')
+    const select = await screen.findByLabelText('Dikerjakan oleh')
+    await within(select).findByRole('option', { name: 'Andi' })
+    await userEvent.selectOptions(select, 'Andi')
+    await userEvent.click(screen.getByRole('button', { name: 'Simpan' }))
+    await waitFor(() => expect(patched).toBeDefined())
+    expect(patched.assigneeId).toBe(2)
+  })
+
+  it('shows inactive assignee as disabled option', async () => {
+    setup('admin', 1, order({ assignee: { id: 9, name: 'Dodi', active: false } }), () => {})
+    renderApp('/order/5/edit')
+    const select = await screen.findByLabelText('Dikerjakan oleh')
+    expect(select).toHaveDisplayValue('Dodi (nonaktif)')
+  })
+})
+
 describe('OrderDetail', () => {
   it('member sees no Buat invoice, no status selects', async () => {
     mockFetch({ ...me('member', 1), 'GET /api/orders/5': () => json(200, order()) })

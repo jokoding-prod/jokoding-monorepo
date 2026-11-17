@@ -51,6 +51,7 @@ export default function OrderDetail() {
   }
 
   async function remove() {
+    setError('')
     if (!window.confirm('Hapus order ini? Tindakan ini tidak bisa dibatalkan.')) return
     try {
       await api(`/api/orders/${id}`, { method: 'DELETE' })
