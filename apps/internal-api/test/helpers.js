@@ -27,3 +27,12 @@ export async function freshDb() {
     },
   };
 }
+
+export const login = (app, username, password, ip = '1.1.1.1', extra = {}) =>
+  app.request('/api/auth/login', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', 'x-real-ip': ip, ...extra },
+    body: JSON.stringify({ username, password }),
+  });
+
+export const cookieOf = (res) => res.headers.get('set-cookie').split(';')[0];
