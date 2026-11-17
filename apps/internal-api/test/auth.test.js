@@ -22,10 +22,10 @@ async function setup() {
   return { ...db, app, mk };
 }
 
-const login = (app, username, password, ip = '1.1.1.1') =>
+const login = (app, username, password, ip = '1.1.1.1', extra = {}) =>
   app.request('/api/auth/login', {
     method: 'POST',
-    headers: { 'content-type': 'application/json', 'x-forwarded-for': ip },
+    headers: { 'content-type': 'application/json', 'x-real-ip': ip, ...extra },
     body: JSON.stringify({ username, password }),
   });
 
@@ -166,6 +166,41 @@ test('requireAdmin: member 403, admin 200, anonymous 401', { skip: skipReason },
     assert.deepEqual(await res.json(), { error: 'forbidden' });
     assert.equal((await app.request('/test/admin-only', { headers: { cookie: a } })).status, 200);
     assert.equal((await app.request('/test/admin-only')).status, 401);
+  } finally {
+    await cleanup();
+  }
+});
+
+test('spoofed X-Forwarded-For does not bypass per-IP limit', { skip: skipReason }, async () => {
+  const { app, cleanup } = await setup();
+  try {
+    for (let i = 0; i < 10; i++) {
+      assert.equal((await login(app, 'admin1', 'bad', '1.1.1.1', { 'x-forwarded-for': `9.9.9.${i}` })).status, 401);
+    }
+    assert.equal((await login(app, 'admin1', 'bad', '1.1.1.1', { 'x-forwarded-for': '8.8.8.8' })).status, 429);
+  } finally {
+    await cleanup();
+  }
+});
+
+test('per-username cap (30) applies across IPs', { skip: skipReason }, async () => {
+  const { app, cleanup } = await setup();
+  try {
+    for (let ip = 1; ip <= 3; ip++) {
+      for (let i = 0; i < 10; i++) assert.equal((await login(app, 'admin1', 'bad', `3.3.3.${ip}`)).status, 401);
+    }
+    assert.equal((await login(app, 'admin1', 'pw-admin1', '3.3.3.4')).status, 429);
+  } finally {
+    await cleanup();
+  }
+});
+
+test('concurrent bad logins are counted before verification', { skip: skipReason }, async () => {
+  const { app, cleanup } = await setup();
+  try {
+    const res = await Promise.all(Array.from({ length: 15 }, () => login(app, 'admin1', 'bad')));
+    const n429 = res.filter((r) => r.status === 429).length;
+    assert.ok(n429 >= 5, `expected >=5 429s, got ${n429}`);
   } finally {
     await cleanup();
   }

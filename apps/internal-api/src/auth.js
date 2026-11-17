@@ -6,6 +6,7 @@ import { verifyPassword, hashPassword } from './password.js';
 export const COOKIE_NAME = 'jki_session';
 const SESSION_SECONDS = 30 * 24 * 3600;
 const MAX_FAILS = 10;
+const MAX_FAILS_PER_USER = 30;
 const WINDOW_MS = 15 * 60 * 1000;
 
 // Verified against when the username is unknown, so timing does not reveal it.
@@ -21,30 +22,47 @@ function cookieOpts(config) {
   };
 }
 
+// Behind nginx (`proxy_set_header X-Real-IP $remote_addr`). X-Forwarded-For is client-controlled: ignored.
 export function clientIp(c) {
-  const xff = c.req.header('x-forwarded-for');
-  if (xff) return xff.split(',')[0].trim();
+  const real = c.req.header('x-real-ip');
+  if (real) return real.trim();
   return c.env?.incoming?.socket?.remoteAddress || 'unknown';
 }
 
+const SWEEP_AT = 10000;
+
 function createLimiter() {
-  const fails = new Map(); // key -> { count, resetAt }
+  const attempts = new Map(); // key -> { count, resetAt }
   const live = (key) => {
-    const e = fails.get(key);
+    const e = attempts.get(key);
     if (e && e.resetAt <= Date.now()) {
-      fails.delete(key);
+      attempts.delete(key);
       return null;
     }
     return e || null;
   };
+  const sweep = () => {
+    const now = Date.now();
+    for (const [k, e] of attempts) if (e.resetAt <= now) attempts.delete(k);
+  };
   return {
-    blocked: (key) => (live(key)?.count || 0) >= MAX_FAILS,
-    fail(key) {
+    // Counts an attempt before verification; false when the limit is already reached.
+    reserve(key, max) {
       const e = live(key);
-      if (e) e.count++;
-      else fails.set(key, { count: 1, resetAt: Date.now() + WINDOW_MS });
+      if (e) {
+        if (e.count >= max) return false;
+        e.count++;
+        return true;
+      }
+      if (attempts.size > SWEEP_AT) sweep();
+      attempts.set(key, { count: 1, resetAt: Date.now() + WINDOW_MS });
+      return true;
     },
-    reset: (key) => fails.delete(key),
+    release(key) {
+      const e = live(key);
+      if (e && --e.count <= 0) attempts.delete(key);
+    },
+    reset: (key) => attempts.delete(key),
   };
 }
 
@@ -82,7 +100,12 @@ export function authRoutes({ pool, config }) {
     const username = typeof body?.username === 'string' ? body.username.trim() : '';
     const password = typeof body?.password === 'string' ? body.password : '';
     const key = `${username.toLowerCase()}|${clientIp(c)}`;
-    if (limiter.blocked(key)) return c.json({ error: 'Terlalu banyak percobaan. Coba lagi nanti.' }, 429);
+    const userKey = `user|${username.toLowerCase()}`;
+    if (!limiter.reserve(key, MAX_FAILS)) return c.json({ error: 'Terlalu banyak percobaan. Coba lagi nanti.' }, 429);
+    if (!limiter.reserve(userKey, MAX_FAILS_PER_USER)) {
+      limiter.release(key);
+      return c.json({ error: 'Terlalu banyak percobaan. Coba lagi nanti.' }, 429);
+    }
 
     const { rows } = await pool.query(
       'select id, name, username, role, password_hash, active from users where username = $1',
@@ -91,10 +114,10 @@ export function authRoutes({ pool, config }) {
     const u = rows[0];
     const ok = await verifyPassword(password, u ? u.password_hash : await DUMMY_HASH);
     if (!u || !u.active || !ok) {
-      limiter.fail(key);
       return c.json({ error: 'Username atau password salah' }, 401);
     }
     limiter.reset(key);
+    limiter.release(userKey);
     const sid = randomBytes(32).toString('base64url');
     await pool.query('insert into sessions(id, user_id, expires_at) values($1,$2, now() + $3 * interval \'1 second\')', [
       sid,
