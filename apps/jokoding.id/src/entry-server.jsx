@@ -7,6 +7,7 @@ import App from './App'
 export { getPosts } from './blog/posts'
 export { blogIndexMeta, postMeta, renderHead } from './blog/seo'
 export { LANDINGS, landingMeta } from './landing/landings'
+export { feedbackMeta } from './feedback/feedbackMeta'
 export { buildSitemap } from './blog/sitemap'
 
 export const render = (url) =>
