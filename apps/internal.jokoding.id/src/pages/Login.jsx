@@ -1,16 +1,18 @@
 import { useState } from 'react'
-import { Navigate, useNavigate } from 'react-router-dom'
+import { Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth/AuthContext.jsx'
 
 export default function Login() {
   const { user, login } = useAuth()
   const navigate = useNavigate()
+  const from = useLocation().state?.from
+  const dest = typeof from?.pathname === 'string' && from.pathname !== '/login' ? `${from.pathname}${from.search || ''}` : '/'
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
 
-  if (user) return <Navigate to="/" replace />
+  if (user) return <Navigate to={dest} replace />
 
   async function onSubmit(e) {
     e.preventDefault()
@@ -18,7 +20,7 @@ export default function Login() {
     setBusy(true)
     try {
       await login(username.trim(), password)
-      navigate('/', { replace: true })
+      navigate(dest, { replace: true })
     } catch (err) {
       setError(err.message)
     } finally {

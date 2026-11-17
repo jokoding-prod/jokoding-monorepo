@@ -29,15 +29,22 @@ export default function InvoiceEditor() {
   const [banks, setBanks] = useState([])
   const [slot, setSlot] = useState('')
   const [loadError, setLoadError] = useState('')
+  const [bankError, setBankError] = useState('')
   const [saveError, setSaveError] = useState('')
   const [saving, setSaving] = useState(false)
 
   useEffect(() => {
     let alive = true
+    setLoadError('')
+    setSaveError('')
+    setBankError('')
     const source = isEdit
       ? api(`/api/invoices/${id}`).then((inv) => ({ number: inv.number, draft: inv.data }))
       : api(`/api/orders/${orderId}/invoice-draft`)
-    Promise.all([source, api('/api/banks').catch(() => [])])
+    Promise.all([source, api('/api/banks').catch(() => {
+        if (alive) setBankError('Gagal memuat rekening')
+        return []
+      })])
       .then(([res, bankList]) => {
         if (!alive) return
         setNumber(res.number || '')
@@ -102,7 +109,9 @@ export default function InvoiceEditor() {
       const saved = isEdit
         ? await api(`/api/invoices/${id}`, { method: 'PUT', body: { number, data: clean() } })
         : await api('/api/invoices', { method: 'POST', body: { orderId, number, autoNumber, data: clean() } })
-      navigate(`/invoice/${saved?.id ?? id}`)
+      const savedId = saved?.id ?? id
+      if (!savedId) throw new Error('Invoice tersimpan, tetapi ID tidak diterima. Buka daftar invoice untuk melihatnya.')
+      navigate(`/invoice/${savedId}`)
     } catch (err) {
       setSaveError(err.message)
       setSaving(false)
@@ -110,7 +119,7 @@ export default function InvoiceEditor() {
   }
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[minmax(0,380px)_minmax(0,1fr)]">
+    <div className="grid gap-6 lg:grid-cols-[minmax(0,380px)_minmax(0,1fr)] print:block">
       <form onSubmit={submit} className="no-print space-y-4">
         <h1 className="text-xl font-bold text-gray-900">{isEdit ? 'Edit invoice' : 'Buat invoice'}</h1>
         <Field text="Nomor invoice">
@@ -214,6 +223,11 @@ export default function InvoiceEditor() {
             onChange={setNum('depositPercent')}
           />
         </Field>
+        {bankError && (
+          <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-700">
+            {bankError}
+          </p>
+        )}
         <Field text="Rekening bank">
           <select className={input} value={slot} onChange={pickBank}>
             {!slot && <option value="">{data.bankName ? `${data.bankName} - ${data.accountNumber}` : 'Pilih rekening'}</option>}

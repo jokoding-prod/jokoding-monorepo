@@ -14,12 +14,15 @@ function json(status, body) {
 }
 
 function mockFetch(handlers) {
-  global.fetch = vi.fn((url, opts = {}) => {
+  vi.stubGlobal(
+    'fetch',
+    vi.fn((url, opts = {}) => {
     const key = `${opts.method || 'GET'} ${new URL(url, 'http://localhost').pathname}`
     const h = handlers[key]
     if (!h) return json(404, { error: 'Tidak ditemukan' })
     return h(opts)
-  })
+    })
+  )
 }
 
 const me = (role, id = 1) => ({
@@ -59,7 +62,10 @@ function renderApp(path) {
   )
 }
 
-afterEach(() => vi.restoreAllMocks())
+afterEach(() => {
+  vi.unstubAllGlobals()
+  vi.restoreAllMocks()
+})
 
 describe('format', () => {
   it('formatRupiah', () => {

@@ -30,7 +30,7 @@ export default function Shell() {
             <span className="hidden text-sm text-gray-600 sm:inline">{user.name}</span>
             <button
               type="button"
-              onClick={logout}
+              onClick={() => logout().catch(() => {})}
               className="flex items-center gap-1.5 rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100"
             >
               <LogOut size={16} aria-hidden="true" />

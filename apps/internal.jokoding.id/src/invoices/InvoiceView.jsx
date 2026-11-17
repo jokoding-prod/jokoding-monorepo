@@ -12,6 +12,7 @@ export default function InvoiceView() {
 
   useEffect(() => {
     setInvoice(null)
+    setError('')
     api(`/api/invoices/${id}`).then(setInvoice).catch((err) => setError(err.message))
   }, [id])
 

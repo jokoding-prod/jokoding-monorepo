@@ -10,12 +10,15 @@ function json(status, body) {
 }
 
 function mockFetch(handlers) {
-  global.fetch = vi.fn((url, opts = {}) => {
+  vi.stubGlobal(
+    'fetch',
+    vi.fn((url, opts = {}) => {
     const key = `${opts.method || 'GET'} ${new URL(url, 'http://localhost').pathname}`
     const h = handlers[key]
     if (!h) return json(404, { error: 'Tidak ditemukan' })
     return h(opts)
-  })
+    })
+  )
 }
 
 const me = { 'GET /api/auth/me': () => json(200, { id: 1, name: 'Budi', username: 'budi', role: 'admin' }) }
@@ -54,7 +57,10 @@ function renderApp(path) {
   )
 }
 
-afterEach(() => vi.restoreAllMocks())
+afterEach(() => {
+  vi.unstubAllGlobals()
+  vi.restoreAllMocks()
+})
 
 describe('InvoiceSheet', () => {
   it('renders the Deka Restu sample like the old app', () => {
@@ -159,6 +165,29 @@ describe('InvoiceEditor (new)', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('Order sudah punya invoice')
   })
 
+  it('shows an error when the bank list fails to load', async () => {
+    mockFetch({
+      ...me,
+      'GET /api/banks': () => json(500, { error: 'boom' }),
+      'GET /api/orders/5/invoice-draft': () => json(200, { number: 'INV-004/JKD/XI/2026', draft: deka() })
+    })
+    renderApp('/invoice/new?order=5')
+    expect(await screen.findByText('Gagal memuat rekening')).toBeInTheDocument()
+    expect(screen.getByLabelText('Nomor invoice')).toBeInTheDocument()
+  })
+
+  it('shows an error when the saved invoice has no id', async () => {
+    mockFetch({
+      ...me,
+      ...banks,
+      'GET /api/orders/5/invoice-draft': () => json(200, { number: 'INV-004/JKD/XI/2026', draft: deka() }),
+      'POST /api/invoices': () => json(201, {})
+    })
+    renderApp('/invoice/new?order=5')
+    await userEvent.setup().click(await screen.findByRole('button', { name: 'Simpan' }))
+    expect(await screen.findByText(/ID tidak diterima/)).toBeInTheDocument()
+  })
+
   it('adds and removes items', async () => {
     mockFetch({
       ...me,
@@ -203,12 +232,16 @@ describe('InvoiceView', () => {
         return json(200, { id: 9, ...put, orderId: 5 })
       }
     })
-    const print = vi.fn(() => expect(document.title).toBe('Invoice - Deka Restu - November 2026'))
+    let titleAtPrint
+    const print = vi.fn(() => {
+      titleAtPrint = document.title
+    })
     window.print = print
     renderApp('/invoice/9')
     const user = userEvent.setup()
     await user.click(await screen.findByRole('button', { name: /Download PDF/ }))
     expect(print).toHaveBeenCalled()
+    expect(titleAtPrint).toBe('Invoice - Deka Restu - November 2026')
     await user.click(screen.getByRole('link', { name: /Edit/ }))
     const client = await screen.findByLabelText('Klien')
     await user.clear(client)

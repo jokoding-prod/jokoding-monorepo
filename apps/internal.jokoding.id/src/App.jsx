@@ -1,4 +1,4 @@
-import { Navigate, Outlet, Route, Routes } from 'react-router-dom'
+import { Navigate, Outlet, Route, Routes, useLocation } from 'react-router-dom'
 import { AuthProvider, useAuth } from './auth/AuthContext.jsx'
 import Shell from './layout/Shell.jsx'
 import Login from './pages/Login.jsx'
@@ -12,8 +12,9 @@ import InvoiceView from './invoices/InvoiceView.jsx'
 
 function Protected() {
   const { user, loading } = useAuth()
+  const location = useLocation()
   if (loading) return <p className="p-6 text-gray-600">Memuat...</p>
-  if (!user) return <Navigate to="/login" replace />
+  if (!user) return <Navigate to="/login" replace state={{ from: location }} />
   return <Shell />
 }
 

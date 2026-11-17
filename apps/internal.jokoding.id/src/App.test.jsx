@@ -13,12 +13,15 @@ function json(status, body) {
 }
 
 function mockFetch(handlers) {
-  global.fetch = vi.fn((url, opts = {}) => {
+  vi.stubGlobal(
+    'fetch',
+    vi.fn((url, opts = {}) => {
     const key = `${opts.method || 'GET'} ${new URL(url, 'http://localhost').pathname}`
     const h = handlers[key]
     if (!h) return json(404, { error: 'Tidak ditemukan' })
     return h(opts)
-  })
+    })
+  )
 }
 
 const unauth = { 'GET /api/auth/me': () => json(401, { error: 'Belum login' }) }
@@ -34,7 +37,10 @@ function renderApp(path = '/') {
   )
 }
 
-afterEach(() => vi.restoreAllMocks())
+afterEach(() => {
+  vi.unstubAllGlobals()
+  vi.restoreAllMocks()
+})
 
 describe('App', () => {
   it('shows Login when unauthenticated', async () => {
@@ -76,5 +82,36 @@ describe('App', () => {
     renderApp('/')
     await userEvent.click(await screen.findByRole('button', { name: /Keluar/ }))
     expect(await screen.findByRole('button', { name: 'Masuk' })).toBeInTheDocument()
+  })
+
+  it('returns to the page that required login after signing in', async () => {
+    let loggedIn = false
+    mockFetch({
+      'GET /api/auth/me': () =>
+        loggedIn ? json(200, { id: 1, name: 'Budi', username: 'budi', role: 'admin' }) : json(401, { error: 'Belum login' }),
+      'POST /api/auth/login': () => {
+        loggedIn = true
+        return json(200, { id: 1, name: 'Budi', username: 'budi', role: 'admin' })
+      },
+      'GET /api/orders/5': () => json(404, { error: 'Order tidak ditemukan' })
+    })
+    renderApp('/order/5')
+    await userEvent.type(await screen.findByLabelText('Username'), 'budi')
+    await userEvent.type(screen.getByLabelText('Password'), 'pw')
+    await userEvent.click(screen.getByRole('button', { name: 'Masuk' }))
+    expect(await screen.findByText('Order tidak ditemukan')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Masuk' })).toBeNull()
+  })
+
+  it('logout failure does not leave an unhandled rejection', async () => {
+    const unhandled = vi.fn()
+    process.on('unhandledRejection', unhandled)
+    mockFetch({ ...as('admin'), 'POST /api/auth/logout': () => json(500, { error: 'boom' }) })
+    renderApp('/')
+    await userEvent.click(await screen.findByRole('button', { name: /Keluar/ }))
+    expect(await screen.findByRole('button', { name: 'Masuk' })).toBeInTheDocument()
+    await new Promise((r) => setTimeout(r, 20))
+    process.off('unhandledRejection', unhandled)
+    expect(unhandled).not.toHaveBeenCalled()
   })
 })
