@@ -7,17 +7,19 @@ import { verifyPassword } from '../src/password.js';
 test('create-admin / add-user hash the password and set role', { skip: skipReason }, async () => {
   const { pool, cleanup } = await freshDb();
   try {
-    await commands['create-admin'](pool, ['boss', 'The Boss'], { password: 'pw1' });
-    await commands['add-user'](pool, ['joko', 'Joko'], { password: 'pw2' });
+    await commands['create-admin'](pool, ['boss', 'The Boss'], { password: 'password1' });
+    await commands['add-user'](pool, ['joko', 'Joko'], { password: 'password2' });
     const { rows } = await pool.query('select * from users order by id');
     assert.deepEqual(rows.map((r) => [r.username, r.name, r.role, r.active]), [
       ['boss', 'The Boss', 'admin', true],
       ['joko', 'Joko', 'member', true],
     ]);
-    assert.equal(await verifyPassword('pw1', rows[0].password_hash), true);
-    await assert.rejects(commands['add-user'](pool, ['joko', 'Dup'], { password: 'x' }), /sudah ada|exists/i);
+    assert.equal(await verifyPassword('password1', rows[0].password_hash), true);
+    await assert.rejects(commands['add-user'](pool, ['joko', 'Dup'], { password: 'password3' }), /sudah ada|exists/i);
     await assert.rejects(commands['add-user'](pool, ['x'], { password: 'x' }), /usage/i);
-    await assert.rejects(commands['add-user'](pool, ['y', 'Y'], { password: '' }), /password/i);
+    await assert.rejects(commands['add-user'](pool, ['yyy', 'Y'], { password: '' }), /password/i);
+    await assert.rejects(commands['add-user'](pool, ['yyy', 'Y'], { password: 'short' }), /minimal 8/i);
+    await assert.rejects(commands['add-user'](pool, ['Bad Name', 'Y'], { password: 'password5' }), /username/i);
   } finally {
     await cleanup();
   }
@@ -46,7 +48,7 @@ test('set-bank upserts by slot; --default is exclusive', { skip: skipReason }, a
 test('deactivate sets inactive and deletes sessions', { skip: skipReason }, async () => {
   const { pool, cleanup } = await freshDb();
   try {
-    await commands['add-user'](pool, ['joko', 'Joko'], { password: 'p' });
+    await commands['add-user'](pool, ['joko', 'Joko'], { password: 'password4' });
     const { rows } = await pool.query('select id from users');
     await pool.query(`insert into sessions(id,user_id,expires_at) values('s1',$1, now() + interval '1 day')`, [rows[0].id]);
     await commands['deactivate'](pool, ['joko']);

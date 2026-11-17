@@ -9,6 +9,7 @@ import OrderDetail from './orders/OrderDetail.jsx'
 import InvoicesPage from './invoices/InvoicesPage.jsx'
 import InvoiceEditor from './invoices/InvoiceEditor.jsx'
 import InvoiceView from './invoices/InvoiceView.jsx'
+import SettingsPage from './settings/SettingsPage.jsx'
 
 function Protected() {
   const { user, loading } = useAuth()
@@ -45,6 +46,7 @@ export default function App() {
             <Route path="invoice/new" element={<InvoiceEditor />} />
             <Route path="invoice/:id" element={<InvoiceView />} />
             <Route path="invoice/:id/edit" element={<InvoiceEditor />} />
+            <Route path="pengaturan" element={<SettingsPage />} />
           </Route>
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />

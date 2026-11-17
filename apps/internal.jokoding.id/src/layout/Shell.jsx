@@ -7,7 +7,12 @@ export default function Shell() {
   const tabs = [
     { to: '/', label: 'Beranda', end: true },
     { to: '/order', label: 'Order' },
-    ...(user.role === 'admin' ? [{ to: '/invoice', label: 'Invoice' }] : [])
+    ...(user.role === 'admin'
+      ? [
+          { to: '/invoice', label: 'Invoice' },
+          { to: '/pengaturan', label: 'Pengaturan' }
+        ]
+      : [])
   ]
   const tabClass = ({ isActive }) =>
     `rounded-lg px-3 py-2 text-sm font-medium ${

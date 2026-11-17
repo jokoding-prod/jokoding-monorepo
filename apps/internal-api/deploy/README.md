@@ -70,6 +70,10 @@ sudo jokoding-internal deactivate budi                  # nonaktifkan akun
 
 `set-bank` dengan slot yang sama akan menimpa rekening di slot itu. `--default` menjadikannya rekening default di invoice.
 
+Setelah admin pertama dibuat, semua ini juga bisa dilakukan dari halaman **Pengaturan** (`https://internal.jokoding.id/pengaturan`, hanya admin): ubah dua rekening dan pilih default, tambah anggota, nonaktifkan/aktifkan, dan reset password. Menonaktifkan anggota atau mereset passwordnya langsung mengeluarkan sesi login anggota itu. Perintah CLI di atas tetap berlaku; `create-admin` hanya ada di CLI.
+
+Aturan akun (CLI dan halaman Pengaturan sama): username 3-32 karakter berisi huruf kecil, angka, `.`, `-`, `_`; password minimal 8 karakter.
+
 ## 5. Update
 
 ```bash

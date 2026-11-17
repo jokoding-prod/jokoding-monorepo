@@ -1,4 +1,5 @@
 import { Hono } from 'hono';
+import { putBank, toBank } from './settings.js';
 import { calcTotals, invoiceDraftFromOrder, nextInvoiceNumber } from '@jokoding/invoice-core';
 import { requireUser, requireAdmin } from './auth.js';
 
@@ -71,16 +72,9 @@ export function banksRoutes() {
     const { rows } = await c.get('pool').query(
       'select slot, bank_name, account_number, account_holder, is_default from bank_accounts order by slot',
     );
-    return c.json(
-      rows.map((b) => ({
-        slot: b.slot,
-        bankName: b.bank_name,
-        accountNumber: b.account_number,
-        accountHolder: b.account_holder,
-        isDefault: b.is_default,
-      })),
-    );
+    return c.json(rows.map(toBank));
   });
+  r.put('/:slot', putBank);
   return r;
 }
 

@@ -3,12 +3,12 @@
 //   node src/cli.js add-user <username> <name>
 //   node src/cli.js set-bank <slot 1|2> <bank> <number> <holder> [--default]
 //   node src/cli.js deactivate <username>
-// Password is prompted without echo. For scripts/tests set INTERNAL_PASSWORD to skip the prompt.
+// Username: 3-32 chars [a-z0-9._-]; password min 8 chars, prompted without echo. For scripts/tests set INTERNAL_PASSWORD to skip the prompt.
 import { fileURLToPath } from 'node:url';
 import { createInterface } from 'node:readline';
 import { Writable } from 'node:stream';
 import { createPool, migrate } from './db.js';
-import { hashPassword } from './password.js';
+import { checkUsername, createUser, findUserId, setActive, setBank } from './accounts.js';
 
 const USAGE = {
   'create-admin': 'create-admin <username> <name>',
@@ -24,19 +24,9 @@ function usage(cmd) {
 async function insertUser(pool, cmd, role, args, opts) {
   const [username, name] = args;
   if (!username || !name || args.length !== 2) throw usage(cmd);
+  checkUsername(username);
   const password = opts.password ?? process.env.INTERNAL_PASSWORD ?? (await promptHidden('Password: '));
-  if (!password) throw new Error('Password tidak boleh kosong');
-  try {
-    await pool.query('insert into users(name, username, password_hash, role) values($1,$2,$3,$4)', [
-      name,
-      username,
-      await hashPassword(password),
-      role,
-    ]);
-  } catch (err) {
-    if (err.code === '23505') throw new Error(`Username "${username}" sudah ada`);
-    throw err;
-  }
+  await createUser(pool, { username, name, password, role });
   return `${role} "${username}" dibuat`;
 }
 
@@ -47,47 +37,16 @@ export const commands = {
   async 'set-bank'(pool, args) {
     const isDefault = args.includes('--default');
     const pos = args.filter((a) => a !== '--default');
-    const [slotRaw, bank, number, holder] = pos;
+    const [slotRaw, bankName, accountNumber, accountHolder] = pos;
     if (pos.length !== 4) throw usage('set-bank');
     const slot = Number(slotRaw);
-    if (slot !== 1 && slot !== 2) throw new Error('slot harus 1 atau 2');
-    const client = await pool.connect();
-    try {
-      await client.query('begin');
-      if (isDefault) await client.query('update bank_accounts set is_default = false');
-      await client.query(
-        `insert into bank_accounts(slot, bank_name, account_number, account_holder, is_default)
-         values($1,$2,$3,$4,$5)
-         on conflict (slot) do update set bank_name = excluded.bank_name,
-           account_number = excluded.account_number, account_holder = excluded.account_holder,
-           is_default = case when $5 then true else bank_accounts.is_default end`,
-        [slot, bank, number, holder, isDefault],
-      );
-      await client.query('commit');
-    } catch (err) {
-      await client.query('rollback').catch(() => {});
-      throw err;
-    } finally {
-      client.release();
-    }
+    await setBank(pool, { slot, bankName, accountNumber, accountHolder, isDefault });
     return `bank slot ${slot} disimpan${isDefault ? ' (default)' : ''}`;
   },
 
   async deactivate(pool, args) {
     if (args.length !== 1) throw usage('deactivate');
-    const client = await pool.connect();
-    try {
-      await client.query('begin');
-      const { rows } = await client.query('update users set active = false where username = $1 returning id', [args[0]]);
-      if (!rows[0]) throw new Error(`User "${args[0]}" tidak ditemukan`);
-      await client.query('delete from sessions where user_id = $1', [rows[0].id]);
-      await client.query('commit');
-    } catch (err) {
-      await client.query('rollback').catch(() => {});
-      throw err;
-    } finally {
-      client.release();
-    }
+    await setActive(pool, await findUserId(pool, args[0]), false);
     return `user "${args[0]}" dinonaktifkan`;
   },
 };

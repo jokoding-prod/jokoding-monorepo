@@ -2,6 +2,7 @@ import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { authRoutes } from './auth.js';
 import { ordersRoutes, usersRoutes } from './orders.js';
+import { membersRoutes } from './settings.js';
 import { banksRoutes, invoiceDraftRoutes, invoicesRoutes } from './invoices.js';
 
 export function createApp({ pool, config }) {
@@ -33,5 +34,6 @@ export function createApp({ pool, config }) {
   app.route('/api/banks', banksRoutes());
   app.route('/api/invoices', invoicesRoutes());
   app.route('/api/users', usersRoutes());
+  app.route('/api/users', membersRoutes());
   return app;
 }
