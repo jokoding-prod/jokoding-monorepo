@@ -1,0 +1,89 @@
+/* Ported from ../invoice/style.css (sheet + print). Scoped to .invoice-sheet so Tailwind pages are unaffected. */
+.invoice-sheet {
+  --green: #44aa00;
+  --green-soft: #eef7e7;
+  --ink: #141813;
+  --logo-ink: #333333;
+  --paper: #ffffff;
+  position: relative; width: 794px; min-height: 1123px; padding: 66px 64px;
+  color: var(--ink); background: var(--paper); box-shadow: 0 14px 40px rgba(29, 42, 28, .12);
+  font-family: "DM Sans", Arial, sans-serif; font-size: 14px; line-height: 1.4; transform-origin: top left;
+  text-align: left;
+}
+.sheet-frame { width: 794px; margin: 0 auto; }
+.invoice-sheet *, .invoice-sheet *::before, .invoice-sheet *::after { box-sizing: border-box; }
+.invoice-sheet h2, .invoice-sheet h3 { font-family: "Plus Jakarta Sans", Arial, sans-serif; font-weight: 700; }
+.invoice-sheet strong { font-weight: 700; }
+.invoice-sheet p { margin: 1em 0; }
+
+.invoice-sheet .invoice-header { display: flex; align-items: center; justify-content: space-between; }
+.invoice-sheet .invoice-header h2 { margin: 0; font-size: 26px; letter-spacing: -.03em; }
+.invoice-sheet .brand-lockup img { display: block; width: 150px; height: auto; max-height: 52px; object-fit: contain; object-position: right center; }
+.invoice-sheet .brand-wordmark { color: var(--green); font-family: "Plus Jakarta Sans", Arial, sans-serif; font-size: 30px; font-weight: 800; letter-spacing: -.05em; }
+.invoice-sheet .brand-wordmark span { color: var(--logo-ink); }
+
+.invoice-sheet .invoice-meta { display: flex; margin-top: 40px; align-items: end; justify-content: space-between; gap: 24px; }
+.invoice-sheet .bill-to { display: grid; gap: 2px; font-size: 15px; }
+.invoice-sheet .invoice-meta dl { display: grid; gap: 3px; margin: 0; min-width: 260px; }
+.invoice-sheet .invoice-meta dl div, .invoice-sheet .bank-details dl div { display: grid; grid-template-columns: 68px 1fr; gap: 7px; }
+.invoice-sheet .invoice-meta dt, .invoice-sheet .bank-details dt { font-weight: 800; }
+.invoice-sheet .invoice-meta dd, .invoice-sheet .bank-details dd { margin: 0; overflow-wrap: anywhere; }
+.invoice-sheet .invoice-meta dd::before, .invoice-sheet .bank-details dd::before { content: ": "; }
+.invoice-sheet .issued-by { margin: 30px 0 26px; font-size: 15px; }
+
+.invoice-sheet .table-wrap { position: relative; }
+.invoice-sheet table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+.invoice-sheet th, .invoice-sheet td { padding: 9px 10px; border: 1px solid #1d241d; }
+.invoice-sheet th { font-weight: 700; }
+.invoice-sheet thead th { background: var(--green-soft); text-align: center; font-family: "Plus Jakarta Sans", Arial, sans-serif; font-size: 12px; font-weight: 800; }
+.invoice-sheet th:nth-child(1) { width: 7%; } .invoice-sheet th:nth-child(2) { width: 38%; } .invoice-sheet th:nth-child(3) { width: 14%; }
+.invoice-sheet th:nth-child(4), .invoice-sheet th:nth-child(5) { width: 20.5%; }
+.invoice-sheet tbody td { height: 56px; vertical-align: top; }
+.invoice-sheet tbody td:nth-child(1), .invoice-sheet tbody td:nth-child(3) { text-align: center; }
+.invoice-sheet tbody td:nth-child(2) { font-weight: 700; white-space: pre-line; overflow-wrap: anywhere; }
+.invoice-sheet tbody td:nth-child(4), .invoice-sheet tbody td:nth-child(5), .invoice-sheet tfoot td { text-align: right; white-space: nowrap; }
+.invoice-sheet tfoot th { text-align: right; font-family: "Plus Jakarta Sans", Arial, sans-serif; }
+.invoice-sheet tfoot td { font-weight: 700; }
+.invoice-sheet tfoot tr.minor th, .invoice-sheet tfoot tr.minor td { font-weight: 600; font-size: 13px; }
+
+.invoice-sheet .paid-stamp {
+  position: absolute; right: 24px; top: 28px;
+  padding: 4px 18px; border: 4px solid var(--green); border-radius: 10px;
+  color: var(--green); font-family: "Plus Jakarta Sans", Arial, sans-serif; font-size: 40px; font-weight: 800; letter-spacing: .12em;
+  transform: rotate(-12deg); opacity: .85; pointer-events: none;
+}
+
+.invoice-sheet .payment-terms { margin-top: 26px; }
+.invoice-sheet .payment-terms h3, .invoice-sheet .notes-block h3 { margin: 0 0 3px; font-size: 14px; }
+.invoice-sheet .payment-terms ol { margin: 0; padding-left: 19px; list-style: decimal; }
+.invoice-sheet .payment-terms li { padding-left: 4px; margin-bottom: 4px; }
+.invoice-sheet .bank-details { margin-top: 24px; }
+.invoice-sheet .bank-details p { margin: 0 0 2px; }
+.invoice-sheet .bank-details dl { display: grid; gap: 1px; margin: 0; }
+.invoice-sheet .bank-details dl div { grid-template-columns: 145px 1fr; }
+.invoice-sheet .notes-block { margin-top: 24px; }
+.invoice-sheet .notes-block p { margin: 0; white-space: pre-line; overflow-wrap: anywhere; }
+.invoice-sheet .thank-you { margin: 26px 0 0; }
+.invoice-sheet .signature-block { position: relative; display: grid; margin-top: 40px; gap: 1px; }
+.invoice-sheet .signature-box { width: 160px; height: 82px; margin: 2px 0; }
+.invoice-sheet .signature-box img { display: block; width: 100%; height: 100%; object-fit: contain; object-position: left center; }
+.invoice-sheet .signature-block span { font-size: 13px; }
+.invoice-sheet thead th, .invoice-sheet .paid-stamp { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+
+/* ---------- print: only the sheet, A4, never scaled ---------- */
+@page { size: A4; margin: 0; }
+@media print {
+  html, body { background: #fff !important; }
+  .no-print { display: none !important; }
+  .print-root, .print-root main { display: block !important; max-width: none !important; margin: 0 !important; padding: 0 !important; background: #fff !important; min-height: 0 !important; }
+  .sheet-frame { width: auto !important; height: auto !important; margin: 0 !important; overflow: visible !important; }
+  .invoice-sheet { width: 210mm; min-height: 0; margin: 0; padding: 15mm 17mm 12mm; box-shadow: none; transform: none !important; font-size: 10pt; }
+  .invoice-sheet .invoice-header h2 { font-size: 18pt; }
+  .invoice-sheet .invoice-meta { margin-top: 9mm; }
+  .invoice-sheet .issued-by { margin: 7mm 0 6mm; }
+  .invoice-sheet tbody td { height: auto; min-height: 0; padding-bottom: 14px; }
+  .invoice-sheet .payment-terms, .invoice-sheet .bank-details, .invoice-sheet .notes-block, .invoice-sheet .thank-you { margin-top: 5.5mm; }
+  .invoice-sheet .signature-block { margin-top: 7mm; }
+  .invoice-sheet .signature-box { height: 64px; }
+  .invoice-sheet tr, .invoice-sheet .payment-terms, .invoice-sheet .bank-details, .invoice-sheet .notes-block, .invoice-sheet .signature-block { break-inside: avoid; }
+}
