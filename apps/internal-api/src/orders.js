@@ -1,5 +1,6 @@
 import { Hono } from 'hono';
 import { requireUser, requireAdmin } from './auth.js';
+import { ParamError, pageParams, rangeParams, enumParam } from './params.js';
 
 const PRICE_ERR = 'Harga harus angka bulat ≥ 0';
 const NOT_FOUND = { error: 'Order tidak ditemukan' };
@@ -98,6 +99,13 @@ const FIELDS = {
   paymentStatus: ['payment_status', (p, v) => enumVal(v, PAYMENT, 'Status pembayaran')],
 };
 const ADMIN_ONLY = ['workStatus', 'paymentStatus'];
+// First key is the default. Deadline nulls go last in both directions.
+const ORDER_SORTS = {
+  received_desc: 'o.received_at desc, o.id desc',
+  received_asc: 'o.received_at asc, o.id asc',
+  deadline_asc: 'o.deadline asc nulls last, o.id asc',
+  deadline_desc: 'o.deadline desc nulls last, o.id desc',
+};
 const hasStatus = (body) => ADMIN_ONLY.some((k) => body[k] !== undefined);
 
 async function readBody(c) {
@@ -120,14 +128,26 @@ export function ordersRoutes() {
   r.use('*', requireUser);
 
   r.onError((err, c) => {
-    if (err instanceof BadRequest) return c.json({ error: err.message }, 400);
+    if (err instanceof BadRequest || err instanceof ParamError) return c.json({ error: err.message }, 400);
     throw err;
   });
 
   r.get('/', async (c) => {
+    const sort = ORDER_SORTS[enumParam(c.req.query('sort'), Object.keys(ORDER_SORTS), 'sort')];
+    const { from, to } = rangeParams(c);
+    const { limit, offset } = pageParams(c);
     const [cond, params] = visible(c.get('user'));
-    const { rows } = await c.get('pool').query(`${SELECT} where ${cond} order by o.received_at desc, o.id desc`, params);
-    return c.json(rows.map((r) => toOrder(r, c.get('user').role === 'admin')));
+    const where = [cond];
+    if (from) where.push(`o.received_at >= $${params.push(from)}`);
+    if (to) where.push(`o.received_at <= $${params.push(to)}`);
+    const pool = c.get('pool');
+    const w = where.join(' and ');
+    const total = (await pool.query(`select count(*)::int as n from orders o where ${w}`, params)).rows[0].n;
+    const { rows } = await pool.query(
+      `${SELECT} where ${w} order by ${sort} limit $${params.length + 1} offset $${params.length + 2}`,
+      [...params, limit, offset],
+    );
+    return c.json({ rows: rows.map((r) => toOrder(r, c.get('user').role === 'admin')), total });
   });
 
   r.get('/:id', async (c) => {
