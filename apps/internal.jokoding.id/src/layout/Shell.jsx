@@ -206,9 +206,8 @@ export default function Shell() {
         >
           {drawer ? <X size={20} aria-hidden="true" /> : <Menu size={20} aria-hidden="true" />}
         </button>
-        <Link to="/" className="flex items-center gap-2">
-          <img src="/logo-jokoding-only.png" alt="" className="h-8 w-8 object-contain" />
-          <span className="font-display text-lg font-bold text-brand-800">Jokoding</span>
+        <Link to="/" className="flex items-center gap-2.5" aria-label="Jokoding Internal, ke Beranda">
+          <img src="/logo-jokoding-only.png" alt="Jokoding" className="h-10 w-auto object-contain sm:h-11" />
           <span className="rounded-md bg-brand-50 px-1.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-brand-700">
             Internal
           </span>
