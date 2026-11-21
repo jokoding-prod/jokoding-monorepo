@@ -121,7 +121,7 @@ export default function InvoiceEditor() {
   return (
     <div className="grid gap-6 lg:grid-cols-[minmax(0,380px)_minmax(0,1fr)] print:block">
       <form onSubmit={submit} className="no-print space-y-4">
-        <h1 className="text-xl font-bold text-gray-900">{isEdit ? 'Edit invoice' : 'Buat invoice'}</h1>
+        <h2 className="text-xl font-bold text-gray-900">{isEdit ? 'Edit invoice' : 'Buat invoice'}</h2>
         <Field text="Nomor invoice">
           <input
             className={input}

@@ -34,7 +34,7 @@ export default function InvoiceView() {
   return (
     <div className="space-y-4">
       <div className="no-print flex flex-wrap items-center gap-2">
-        <h1 className="mr-auto text-xl font-bold text-gray-900">{invoice.number}</h1>
+        <h2 className="mr-auto text-xl font-bold text-gray-900">{invoice.number}</h2>
         {invoice.orderId && (
           <Link to={`/order/${invoice.orderId}`} className="text-sm text-green-700 hover:underline">
             Lihat order

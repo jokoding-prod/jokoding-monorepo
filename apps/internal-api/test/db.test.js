@@ -23,7 +23,7 @@ test('migrate is idempotent and creates tables', { skip: skipReason }, async () 
 test('first migrate returns applied file list', { skip: skipReason }, async () => {
   const { pool, applied, cleanup } = await freshDb();
   try {
-    assert.deepEqual(applied, ['001_init.sql', '002_hash_sessions.sql']);
+    assert.deepEqual(applied, ['001_init.sql', '002_hash_sessions.sql', '003_transactions.sql']);
     const { rows } = await pool.query('select name from schema_migrations order by name');
     assert.deepEqual(rows.map((r) => r.name), applied);
   } finally {

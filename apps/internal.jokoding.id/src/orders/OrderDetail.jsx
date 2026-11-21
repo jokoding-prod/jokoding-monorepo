@@ -4,6 +4,7 @@ import { api } from '../api.js'
 import { useAuth } from '../auth/AuthContext.jsx'
 import { PAYMENT_STATUS, WORK_STATUS, formatRupiah, formatTanggal } from '../format.js'
 import StatusBadge from './StatusBadge.jsx'
+import OrderExpenses from './OrderExpenses.jsx'
 
 const btn = 'rounded-lg border px-3 py-2 text-sm font-medium'
 const sel =
@@ -71,7 +72,7 @@ export default function OrderDetail() {
     <div className="max-w-3xl">
       <Link to="/order" className="text-sm text-green-700 hover:underline">&larr; Semua order</Link>
       <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
-        <h1 className="text-xl font-bold text-gray-900">{order.projectName}</h1>
+        <h2 className="text-xl font-bold text-gray-900">{order.projectName}</h2>
         <div className="flex gap-2">
           {canEdit && (
             <Link to={`/order/${order.id}/edit`} className={`${btn} border-gray-300 text-gray-700 hover:bg-gray-100`}>
@@ -154,6 +155,7 @@ export default function OrderDetail() {
           </Row>
         )}
       </dl>
+      {isAdmin && <OrderExpenses orderId={order.id} />}
     </div>
   )
 }

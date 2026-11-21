@@ -123,7 +123,7 @@ t('admin lists all, sorted received_at desc, id desc', async ({ create, call }) 
   const a = await create('ma', { receivedAt: '2026-11-01' });
   const b = await create('mb', { receivedAt: '2026-11-05' });
   const c = await create('ma', { receivedAt: '2026-11-05' });
-  const list = await (await call('admin1', 'GET', '/api/orders')).json();
+  const list = (await (await call('admin1', 'GET', '/api/orders')).json()).rows;
   assert.deepEqual(list.map((o) => o.id), [c.id, b.id, a.id]);
 });
 
@@ -132,7 +132,7 @@ t('member lists only assigned-or-created', async ({ create, call, ids }) => {
   const assigned = await create('admin1', { assigneeId: ids.ma });
   await create('mb');
   await create('admin1');
-  const list = await (await call('ma', 'GET', '/api/orders')).json();
+  const list = (await (await call('ma', 'GET', '/api/orders')).json()).rows;
   assert.deepEqual(list.map((o) => o.id).sort(), [own.id, assigned.id].sort());
 });
 
@@ -140,7 +140,7 @@ t('member creates order assigned to B and still sees it', async ({ create, call,
   const o = await create('ma', { assigneeId: ids.mb });
   assert.equal((await call('ma', 'GET', `/api/orders/${o.id}`)).status, 200);
   assert.equal((await call('mb', 'GET', `/api/orders/${o.id}`)).status, 200);
-  const list = await (await call('ma', 'GET', '/api/orders')).json();
+  const list = (await (await call('ma', 'GET', '/api/orders')).json()).rows;
   assert.ok(list.some((x) => x.id === o.id));
 });
 
@@ -247,7 +247,7 @@ t('member GET of invoiced order exposes no invoice number; admin does', async ({
   await addInvoice(o.id);
   const m = await (await call('ma', 'GET', `/api/orders/${o.id}`)).json();
   assert.deepEqual(m.invoice, { exists: true });
-  const list = await (await call('ma', 'GET', '/api/orders')).json();
+  const list = (await (await call('ma', 'GET', '/api/orders')).json()).rows;
   assert.deepEqual(list[0].invoice, { exists: true });
   const a = await (await call('admin1', 'GET', `/api/orders/${o.id}`)).json();
   assert.equal(a.invoice.number, `INV-${o.id}/JKD/XI/2026`);
@@ -321,4 +321,43 @@ t('admin PATCH of an order deleted mid-request -> 404, not 403', async ({ create
   });
   assert.equal(res.status, 404);
   assert.deepEqual(await res.json(), { error: 'Order tidak ditemukan' });
+});
+
+t('GET /api/orders returns {rows,total} with pagination', async ({ create, call }) => {
+  for (let i = 1; i <= 5; i++) await create('admin1', { receivedAt: `2026-11-0${i}` });
+  const body = await (await call('admin1', 'GET', '/api/orders?limit=2&page=2')).json();
+  assert.equal(body.total, 5);
+  assert.deepEqual(body.rows.map((o) => o.receivedAt), ['2026-11-03', '2026-11-02']);
+  const last = await (await call('admin1', 'GET', '/api/orders?limit=2&page=3')).json();
+  assert.equal(last.rows.length, 1);
+  for (const q of ['limit=0', 'limit=101', 'page=0', 'page=x', 'sort=bogus', 'from=2026-13-01']) {
+    assert.equal((await call('admin1', 'GET', `/api/orders?${q}`)).status, 400, q);
+  }
+});
+
+t('GET /api/orders sort by deadline puts nulls last both ways', async ({ create, call }) => {
+  const n = await create('admin1');
+  const a = await create('admin1', { deadline: '2026-12-01' });
+  const b = await create('admin1', { deadline: '2026-12-05' });
+  const asc = await (await call('admin1', 'GET', '/api/orders?sort=deadline_asc')).json();
+  assert.deepEqual(asc.rows.map((o) => o.id), [a.id, b.id, n.id]);
+  const desc = await (await call('admin1', 'GET', '/api/orders?sort=deadline_desc')).json();
+  assert.deepEqual(desc.rows.map((o) => o.id), [b.id, a.id, n.id]);
+  const page = await (await call('admin1', 'GET', '/api/orders?sort=deadline_asc&limit=2&page=2')).json();
+  assert.deepEqual(page.rows.map((o) => o.id), [n.id]);
+});
+
+t('GET /api/orders filters from/to inclusive and sorts received_asc; member total scoped', async ({ create, call }) => {
+  const a = await create('admin1', { receivedAt: '2026-10-31' });
+  const b = await create('admin1', { receivedAt: '2026-11-01' });
+  const c = await create('admin1', { receivedAt: '2026-11-30' });
+  await create('admin1', { receivedAt: '2026-12-01' });
+  await create('ma', { receivedAt: '2026-11-10' });
+  const body = await (await call('admin1', 'GET', '/api/orders?from=2026-11-01&to=2026-11-30&sort=received_asc')).json();
+  assert.equal(body.total, 3);
+  assert.equal(body.rows[0].id, b.id);
+  assert.equal(body.rows[2].id, c.id);
+  assert.ok(!body.rows.some((o) => o.id === a.id));
+  const m = await (await call('ma', 'GET', '/api/orders')).json();
+  assert.equal(m.total, 1);
 });

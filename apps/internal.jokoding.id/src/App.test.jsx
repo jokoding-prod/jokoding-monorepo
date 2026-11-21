@@ -60,7 +60,7 @@ describe('App', () => {
     renderApp('/invoice')
     expect((await screen.findAllByRole('link', { name: 'Order' })).length).toBeGreaterThan(0)
     expect(screen.queryByRole('link', { name: 'Invoice' })).toBeNull()
-    expect(screen.getByText(/Halo, Budi/)).toBeInTheDocument()
+    expect(await screen.findByText(/Hey, Budi/)).toBeInTheDocument()
   })
 
   it('shows API error on failed login', async () => {
@@ -80,7 +80,8 @@ describe('App', () => {
   it('logout returns to Login', async () => {
     mockFetch({ ...as('admin'), 'POST /api/auth/logout': () => json(204, null) })
     renderApp('/')
-    await userEvent.click(await screen.findByRole('button', { name: /Keluar/ }))
+    await userEvent.click(await screen.findByRole('button', { name: /Budi/ }))
+    await userEvent.click(screen.getByRole('menuitem', { name: /Keluar/ }))
     expect(await screen.findByRole('button', { name: 'Masuk' })).toBeInTheDocument()
   })
 
@@ -108,7 +109,8 @@ describe('App', () => {
     process.on('unhandledRejection', unhandled)
     mockFetch({ ...as('admin'), 'POST /api/auth/logout': () => json(500, { error: 'boom' }) })
     renderApp('/')
-    await userEvent.click(await screen.findByRole('button', { name: /Keluar/ }))
+    await userEvent.click(await screen.findByRole('button', { name: /Budi/ }))
+    await userEvent.click(screen.getByRole('menuitem', { name: /Keluar/ }))
     expect(await screen.findByRole('button', { name: 'Masuk' })).toBeInTheDocument()
     await new Promise((r) => setTimeout(r, 20))
     process.off('unhandledRejection', unhandled)
@@ -133,6 +135,6 @@ describe('App', () => {
     await userEvent.type(await screen.findByLabelText('Username'), 'budi')
     await userEvent.type(screen.getByLabelText('Password'), 'pw')
     await userEvent.click(screen.getByRole('button', { name: 'Masuk' }))
-    expect(await screen.findByText(/Halo, Budi/)).toBeInTheDocument()
+    expect(await screen.findByText(/Hey, Budi/)).toBeInTheDocument()
   })
 })

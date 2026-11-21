@@ -80,7 +80,7 @@ describe('format', () => {
 
 describe('OrdersPage', () => {
   it('renders columns in order with formatted price and badges', async () => {
-    mockFetch({ ...me('admin'), 'GET /api/orders': () => json(200, [order()]) })
+    mockFetch({ ...me('admin'), 'GET /api/orders': () => json(200, { rows: [order()], total: 1 }) })
     renderApp('/order')
     const table = await screen.findByRole('table')
     const heads = within(table).getAllByRole('columnheader').map((h) => h.textContent)
@@ -93,7 +93,7 @@ describe('OrdersPage', () => {
   })
 
   it('shows empty state', async () => {
-    mockFetch({ ...me('member'), 'GET /api/orders': () => json(200, []) })
+    mockFetch({ ...me('member'), 'GET /api/orders': () => json(200, { rows: [], total: 0 }) })
     renderApp('/order')
     expect(await screen.findByText('Belum ada order.')).toBeInTheDocument()
   })
@@ -101,12 +101,37 @@ describe('OrdersPage', () => {
   it('row click opens detail', async () => {
     mockFetch({
       ...me('admin'),
-      'GET /api/orders': () => json(200, [order()]),
+      'GET /api/orders': () => json(200, { rows: [order()], total: 1 }),
       'GET /api/orders/5': () => json(200, order())
     })
     renderApp('/order')
     await userEvent.click(await screen.findByText('Skripsi CV'))
     expect(await screen.findByRole('heading', { name: 'Skripsi CV' })).toBeInTheDocument()
+  })
+})
+
+describe('OrdersPage sort/period/pagination', () => {
+  it('header click changes sort, period select sends from/to, pager moves pages', async () => {
+    mockFetch({ ...me('admin'), 'GET /api/orders': () => json(200, { rows: [order()], total: 45 }) })
+    renderApp('/order')
+    await screen.findByRole('table')
+    const urls = () => fetch.mock.calls.map(([u]) => u).filter((u) => u.startsWith('/api/orders?'))
+    expect(urls().at(-1)).toBe('/api/orders?sort=received_desc&page=1&limit=20')
+    expect(screen.getByRole('columnheader', { name: /Tanggal masuk/ })).toHaveAttribute('aria-sort', 'descending')
+
+    await userEvent.click(screen.getByRole('button', { name: /Deadline/ }))
+    await waitFor(() => expect(urls().at(-1)).toContain('sort=deadline_asc'))
+    expect(screen.getByRole('columnheader', { name: /Deadline/ })).toHaveAttribute('aria-sort', 'ascending')
+    await userEvent.click(screen.getByRole('button', { name: /Deadline/ }))
+    await waitFor(() => expect(urls().at(-1)).toContain('sort=deadline_desc'))
+
+    await userEvent.selectOptions(screen.getByLabelText('Periode'), '3')
+    await waitFor(() => expect(urls().at(-1)).toMatch(/&from=\d{4}-\d{2}-01&to=\d{4}-\d{2}-\d{2}$/))
+
+    expect(screen.getByText('Halaman 1 dari 3')).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Berikutnya' }))
+    await waitFor(() => expect(urls().at(-1)).toContain('page=2'))
+    expect(await screen.findByText('Halaman 2 dari 3')).toBeInTheDocument()
   })
 })
 
@@ -320,7 +345,7 @@ describe('OrderDetail', () => {
     mockFetch({
       ...me('admin'),
       'GET /api/orders/5': () => json(200, order()),
-      'GET /api/orders': () => json(200, []),
+      'GET /api/orders': () => json(200, { rows: [], total: 0 }),
       'DELETE /api/orders/5': del
     })
     renderApp('/order/5')
@@ -328,5 +353,40 @@ describe('OrderDetail', () => {
     expect(window.confirm).toHaveBeenCalled()
     await waitFor(() => expect(del).toHaveBeenCalled())
     expect(await screen.findByText('Belum ada order.')).toBeInTheDocument()
+  })
+})
+
+describe('OrderDetail linked transactions', () => {
+  it('admin sees linked expenses and adds a fee tim expense with orderId', async () => {
+    let posted
+    mockFetch({
+      ...me('admin'),
+      'GET /api/orders/5': () => json(200, order()),
+      'GET /api/orders/5/transactions': () =>
+        json(200, [
+          { id: 1, date: '2026-11-18', type: 'expense', category: 'fee_tim', amount: '100000', note: 'Fee Andi', orderId: 5, createdBy: 1 }
+        ]),
+      'POST /api/transactions': (o) => {
+        posted = JSON.parse(o.body)
+        return json(201, { id: 2, ...posted })
+      }
+    })
+    renderApp('/order/5')
+    const section = await screen.findByRole('region', { name: 'Transaksi terkait' })
+    expect(await within(section).findByText('Fee Andi')).toBeInTheDocument()
+    expect(within(section).getByText(/Total pengeluaran/)).toHaveTextContent('Rp100.000')
+    await userEvent.click(within(section).getByRole('button', { name: /Tambah pengeluaran/ }))
+    await userEvent.type(within(section).getByLabelText('Jumlah (Rp)'), '50000')
+    await userEvent.click(within(section).getByRole('button', { name: 'Simpan' }))
+    await waitFor(() => expect(posted).toBeDefined())
+    expect(posted).toMatchObject({ type: 'expense', category: 'fee_tim', amount: 50000, orderId: 5 })
+  })
+
+  it('member does not request linked transactions', async () => {
+    mockFetch({ ...me('member', 1), 'GET /api/orders/5': () => json(200, order()) })
+    renderApp('/order/5')
+    await screen.findByRole('heading', { name: 'Skripsi CV' })
+    expect(screen.queryByRole('region', { name: 'Transaksi terkait' })).toBeNull()
+    expect(fetch.mock.calls.some(([u]) => u.includes('/transactions'))).toBe(false)
   })
 })
