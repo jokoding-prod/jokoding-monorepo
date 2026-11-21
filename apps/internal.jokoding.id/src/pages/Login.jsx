@@ -111,7 +111,7 @@ export default function Login() {
           </button>
         </form>
 
-        <p className="mt-6 text-center text-xs text-gray-400">© {new Date().getFullYear()} Jokoding · Khusus tim internal</p>
+        <p className="mt-6 text-center text-xs text-gray-400">© {new Date().getFullYear()} Jokoding</p>
       </div>
     </div>
   )
