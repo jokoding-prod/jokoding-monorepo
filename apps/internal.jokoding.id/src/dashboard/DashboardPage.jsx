@@ -17,11 +17,11 @@ const card = 'rounded-2xl border border-gray-200/70 bg-white p-4 shadow-sm sm:p-
 function Banner({ user, period, onPeriod, children }) {
   const today = new Date().toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
   return (
-    <section className="overflow-hidden rounded-3xl bg-gradient-to-br from-brand-700 via-brand-600 to-emerald-500 p-4 text-white shadow-md sm:p-6">
+    <section className="overflow-hidden rounded-3xl bg-[radial-gradient(120%_140%_at_100%_0%,#1f7a45_0%,#14532d_45%,#0f3d22_100%)] p-4 text-white shadow-md sm:p-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <p className="text-sm text-white/80">{today}</p>
-          <h2 className="mt-1 font-display text-2xl font-bold sm:text-3xl">Hey, {user.name} 👋</h2>
+          <h2 className="mt-1 font-display text-2xl font-bold sm:text-3xl">Hey, {user.name}</h2>
           <p className="mt-1 text-sm text-white/80">Ringkasan order dan keuangan Jokoding.</p>
         </div>
         <div role="group" aria-label="Periode" className="flex flex-wrap gap-1.5">
