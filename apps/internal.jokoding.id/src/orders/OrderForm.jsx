@@ -77,7 +77,7 @@ function Form({ order }) {
 
   return (
     <form onSubmit={onSubmit} className="max-w-xl space-y-4 rounded-xl bg-white p-5 shadow-sm">
-      <h1 className="text-xl font-bold text-gray-900">{order ? 'Edit order' : 'Tambah order'}</h1>
+      <h2 className="text-xl font-bold text-gray-900">{order ? 'Edit order' : 'Tambah order'}</h2>
       <div>
         <label htmlFor="projectName" className={label}>Nama project</label>
         <input id="projectName" className={field} value={f.projectName} onChange={set('projectName')} required />

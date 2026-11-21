@@ -22,7 +22,7 @@ export default function InvoicesPage() {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-xl font-bold text-gray-900">Invoice</h1>
+      <h2 className="sr-only">Invoice</h2>
       {rows.length === 0 ? (
         <p className="text-sm text-gray-600">Belum ada invoice. Buat invoice dari halaman detail order.</p>
       ) : (

@@ -80,7 +80,8 @@ describe('App', () => {
   it('logout returns to Login', async () => {
     mockFetch({ ...as('admin'), 'POST /api/auth/logout': () => json(204, null) })
     renderApp('/')
-    await userEvent.click(await screen.findByRole('button', { name: /Keluar/ }))
+    await userEvent.click(await screen.findByRole('button', { name: /Budi/ }))
+    await userEvent.click(screen.getByRole('menuitem', { name: /Keluar/ }))
     expect(await screen.findByRole('button', { name: 'Masuk' })).toBeInTheDocument()
   })
 
@@ -108,7 +109,8 @@ describe('App', () => {
     process.on('unhandledRejection', unhandled)
     mockFetch({ ...as('admin'), 'POST /api/auth/logout': () => json(500, { error: 'boom' }) })
     renderApp('/')
-    await userEvent.click(await screen.findByRole('button', { name: /Keluar/ }))
+    await userEvent.click(await screen.findByRole('button', { name: /Budi/ }))
+    await userEvent.click(screen.getByRole('menuitem', { name: /Keluar/ }))
     expect(await screen.findByRole('button', { name: 'Masuk' })).toBeInTheDocument()
     await new Promise((r) => setTimeout(r, 20))
     process.off('unhandledRejection', unhandled)

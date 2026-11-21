@@ -54,7 +54,8 @@ describe('Pengaturan', () => {
   it('member does not see the nav item and is redirected away', async () => {
     mockFetch({ ...me('member'), 'GET /api/orders': () => json(200, []) })
     renderApp('/pengaturan')
-    expect(await screen.findByRole('link', { name: 'Beranda' })).toBeInTheDocument()
+    const nav = await screen.findByRole('navigation', { name: 'Menu utama' })
+    expect(within(nav).getByRole('link', { name: 'Beranda' })).toBeInTheDocument()
     expect(screen.queryByRole('link', { name: 'Pengaturan' })).not.toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: 'Pengaturan' })).not.toBeInTheDocument()
   })

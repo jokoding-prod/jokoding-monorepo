@@ -25,7 +25,7 @@ export default function OrdersPage() {
   return (
     <div>
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-bold text-gray-900">Order</h1>
+        <h2 className="text-xl font-bold text-gray-900">Order</h2>
         <Link
           to="/order/new"
           className="flex items-center gap-1.5 rounded-lg bg-green-700 px-3 py-2 text-sm font-medium text-white hover:bg-green-800"

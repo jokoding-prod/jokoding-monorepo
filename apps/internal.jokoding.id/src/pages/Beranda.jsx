@@ -5,7 +5,7 @@ export default function Beranda() {
   const { user } = useAuth()
   return (
     <section>
-      <h1 className="text-2xl font-bold text-gray-900">Halo, {user.name}</h1>
+      <h2 className="text-2xl font-bold text-gray-900">Halo, {user.name}</h2>
       <p className="mt-2 text-gray-600">Selamat datang di Jokoding Internal.</p>
       <Link
         to="/order"

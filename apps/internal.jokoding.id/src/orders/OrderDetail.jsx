@@ -71,7 +71,7 @@ export default function OrderDetail() {
     <div className="max-w-3xl">
       <Link to="/order" className="text-sm text-green-700 hover:underline">&larr; Semua order</Link>
       <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
-        <h1 className="text-xl font-bold text-gray-900">{order.projectName}</h1>
+        <h2 className="text-xl font-bold text-gray-900">{order.projectName}</h2>
         <div className="flex gap-2">
           {canEdit && (
             <Link to={`/order/${order.id}/edit`} className={`${btn} border-gray-300 text-gray-700 hover:bg-gray-100`}>

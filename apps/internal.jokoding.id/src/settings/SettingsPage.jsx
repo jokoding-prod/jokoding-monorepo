@@ -331,7 +331,7 @@ function Banks() {
 export default function SettingsPage() {
   return (
     <div className="space-y-8">
-      <h1 className="text-xl font-bold text-gray-900">Pengaturan</h1>
+      <h2 className="sr-only">Pengaturan</h2>
       <Banks />
       <Members />
     </div>
