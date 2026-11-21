@@ -52,12 +52,13 @@ afterEach(() => {
 
 describe('Pengaturan', () => {
   it('member does not see the nav item and is redirected away', async () => {
-    mockFetch({ ...me('member'), 'GET /api/orders': () => json(200, []) })
+    mockFetch({ ...me('member'), 'GET /api/orders': () => json(200, { rows: [], total: 0 }) })
     renderApp('/pengaturan')
     const nav = await screen.findByRole('navigation', { name: 'Menu utama' })
     expect(within(nav).getByRole('link', { name: 'Beranda' })).toBeInTheDocument()
     expect(screen.queryByRole('link', { name: 'Pengaturan' })).not.toBeInTheDocument()
-    expect(screen.queryByRole('heading', { name: 'Pengaturan' })).not.toBeInTheDocument()
+    await waitFor(() => expect(screen.queryByRole('heading', { name: 'Pengaturan' })).not.toBeInTheDocument())
+    expect(screen.getByRole('heading', { level: 1, name: 'Beranda' })).toBeInTheDocument()
   })
 
   it('admin sees banks and members; saves bank and makes slot 2 default', async () => {

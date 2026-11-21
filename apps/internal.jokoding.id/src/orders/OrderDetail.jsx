@@ -4,6 +4,7 @@ import { api } from '../api.js'
 import { useAuth } from '../auth/AuthContext.jsx'
 import { PAYMENT_STATUS, WORK_STATUS, formatRupiah, formatTanggal } from '../format.js'
 import StatusBadge from './StatusBadge.jsx'
+import OrderExpenses from './OrderExpenses.jsx'
 
 const btn = 'rounded-lg border px-3 py-2 text-sm font-medium'
 const sel =
@@ -154,6 +155,7 @@ export default function OrderDetail() {
           </Row>
         )}
       </dl>
+      {isAdmin && <OrderExpenses orderId={order.id} />}
     </div>
   )
 }

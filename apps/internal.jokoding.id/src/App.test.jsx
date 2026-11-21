@@ -60,7 +60,7 @@ describe('App', () => {
     renderApp('/invoice')
     expect((await screen.findAllByRole('link', { name: 'Order' })).length).toBeGreaterThan(0)
     expect(screen.queryByRole('link', { name: 'Invoice' })).toBeNull()
-    expect(screen.getByText(/Halo, Budi/)).toBeInTheDocument()
+    expect(await screen.findByText(/Hey, Budi/)).toBeInTheDocument()
   })
 
   it('shows API error on failed login', async () => {
@@ -135,6 +135,6 @@ describe('App', () => {
     await userEvent.type(await screen.findByLabelText('Username'), 'budi')
     await userEvent.type(screen.getByLabelText('Password'), 'pw')
     await userEvent.click(screen.getByRole('button', { name: 'Masuk' }))
-    expect(await screen.findByText(/Halo, Budi/)).toBeInTheDocument()
+    expect(await screen.findByText(/Hey, Budi/)).toBeInTheDocument()
   })
 })

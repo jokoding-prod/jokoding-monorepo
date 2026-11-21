@@ -2,7 +2,7 @@ import { Navigate, Outlet, Route, Routes, useLocation } from 'react-router-dom'
 import { AuthProvider, useAuth } from './auth/AuthContext.jsx'
 import Shell from './layout/Shell.jsx'
 import Login from './pages/Login.jsx'
-import Beranda from './pages/Beranda.jsx'
+import DashboardPage from './dashboard/DashboardPage.jsx'
 import OrdersPage from './orders/OrdersPage.jsx'
 import OrderForm from './orders/OrderForm.jsx'
 import OrderDetail from './orders/OrderDetail.jsx'
@@ -36,7 +36,7 @@ export default function App() {
       <Routes>
         <Route path="/login" element={<LoginRoute />} />
         <Route element={<Protected />}>
-          <Route index element={<Beranda />} />
+          <Route index element={<DashboardPage />} />
           <Route path="order" element={<OrdersPage />} />
           <Route path="order/new" element={<OrderForm />} />
           <Route path="order/:id" element={<OrderDetail />} />
