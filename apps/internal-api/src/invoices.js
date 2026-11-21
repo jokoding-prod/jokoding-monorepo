@@ -2,6 +2,7 @@ import { Hono } from 'hono';
 import { putBank, toBank } from './settings.js';
 import { calcTotals, invoiceDraftFromOrder, nextInvoiceNumber } from '@jokoding/invoice-core';
 import { requireUser, requireAdmin } from './auth.js';
+import { ParamError, pageParams } from './params.js';
 
 const MAX_INT = 2147483647;
 const MAX_TRIES = 3; // auto-number insert attempts
@@ -110,15 +111,19 @@ export function invoicesRoutes() {
   r.use('*', requireUser, requireAdmin);
 
   r.onError((err, c) => {
-    if (err instanceof BadRequest) return c.json({ error: err.message }, 400);
+    if (err instanceof BadRequest || err instanceof ParamError) return c.json({ error: err.message }, 400);
     throw err;
   });
 
   r.get('/', async (c) => {
-    const { rows } = await c.get('pool').query(
-      'select id, number, order_id, data, created_at from invoices order by created_at desc, id desc',
+    const { limit, offset } = pageParams(c);
+    const pool = c.get('pool');
+    const total = (await pool.query('select count(*)::int as n from invoices')).rows[0].n;
+    const { rows } = await pool.query(
+      'select id, number, order_id, data, created_at from invoices order by created_at desc, id desc limit $1 offset $2',
+      [limit, offset],
     );
-    return c.json(rows.map(toListItem));
+    return c.json({ rows: rows.map(toListItem), total });
   });
 
   r.get('/:id', async (c) => {

@@ -112,7 +112,8 @@ t('create succeeds, fills order.invoice, list/get/put work', async ({ call, orde
   const ord = await (await call('admin1', 'GET', `/api/orders/${o.id}`)).json();
   assert.deepEqual(ord.invoice, { id: inv.id, number: 'INV-001/JKD/XI/2026' });
 
-  const list = await (await call('admin1', 'GET', '/api/invoices')).json();
+  const { rows: list, total } = await (await call('admin1', 'GET', '/api/invoices')).json();
+  assert.equal(total, 1);
   assert.equal(list.length, 1);
   assert.equal(list[0].client, 'Budi');
   assert.equal(list[0].total, 200000);
@@ -135,8 +136,12 @@ t('list is newest first', async ({ call, order }) => {
   const b = await order();
   await call('admin1', 'POST', '/api/invoices', { orderId: a.id, data: data({ client: 'A' }) });
   await call('admin1', 'POST', '/api/invoices', { orderId: b.id, data: data({ client: 'B' }) });
-  const list = await (await call('admin1', 'GET', '/api/invoices')).json();
+  const { rows: list } = await (await call('admin1', 'GET', '/api/invoices')).json();
   assert.deepEqual(list.map((i) => i.client), ['B', 'A']);
+  const p2 = await (await call('admin1', 'GET', '/api/invoices?limit=1&page=2')).json();
+  assert.equal(p2.total, 2);
+  assert.deepEqual(p2.rows.map((i) => i.client), ['A']);
+  assert.equal((await call('admin1', 'GET', '/api/invoices?limit=0')).status, 400);
 });
 
 t('POST validation and missing order', async ({ call, order }) => {

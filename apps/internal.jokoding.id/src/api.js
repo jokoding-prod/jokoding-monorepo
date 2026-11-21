@@ -1,3 +1,5 @@
+import { clearCache } from './cacheStore.js'
+
 const BASE = import.meta.env.VITE_API_URL || ''
 
 export class ApiError extends Error {
@@ -20,6 +22,7 @@ export async function api(path, { method = 'GET', body } = {}) {
   } catch {
     throw new ApiError(0, 'Tidak dapat terhubung ke server')
   }
+  if (res.ok && method !== 'GET') clearCache()
   if (res.status === 204) return null
   let data = null
   try {

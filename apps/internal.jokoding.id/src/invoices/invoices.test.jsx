@@ -208,14 +208,14 @@ describe('InvoicesPage', () => {
     mockFetch({
       ...me,
       'GET /api/invoices': () =>
-        json(200, [{ id: 9, number: 'INV-004/JKD/XI/2026', orderId: 5, client: 'Deka Restu', total: 350000, date: '2026-11-16', createdAt: 'x' }]),
+        json(200, { rows: [{ id: 9, number: 'INV-004/JKD/XI/2026', orderId: 5, client: 'Deka Restu', total: 350000, date: '2026-11-16', createdAt: 'x' }], total: 1 }),
       'GET /api/invoices/9': () => json(200, { id: 9, number: 'INV-004/JKD/XI/2026', orderId: 5, data: deka() })
     })
     renderApp('/invoice')
     const table = await screen.findByRole('table')
-    expect(within(table).getAllByRole('columnheader').map((h) => h.textContent)).toEqual(['Nomor', 'Klien', 'Tanggal', 'Total'])
+    expect(within(table).getAllByRole('columnheader').map((h) => h.textContent)).toEqual(['Nomor', 'Klien', 'Tanggal', 'Total', 'Aksi'])
     expect(within(table).getByText('Rp350.000')).toBeInTheDocument()
-    await userEvent.setup().click(within(table).getByText('Deka Restu'))
+    await userEvent.setup().click(within(table).getByRole('link', { name: 'Lihat invoice INV-004/JKD/XI/2026' }))
     expect(await screen.findByRole('button', { name: /Download PDF/ })).toBeInTheDocument()
   })
 })

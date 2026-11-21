@@ -1,37 +1,8 @@
 import { useCallback, useEffect, useState } from 'react'
 import { api } from '../api.js'
+import { readCache, writeCache } from '../cacheStore.js'
 
-const PREFIX = 'jk-internal:cache:'
-
-export function readCache(key) {
-  try {
-    const raw = sessionStorage.getItem(PREFIX + key)
-    if (!raw) return null
-    const v = JSON.parse(raw)
-    return v && typeof v.at === 'number' ? v : null
-  } catch {
-    return null
-  }
-}
-
-export function writeCache(key, data) {
-  try {
-    sessionStorage.setItem(PREFIX + key, JSON.stringify({ data, at: Date.now() }))
-  } catch {
-    // penyimpanan penuh atau diblokir
-  }
-}
-
-export function clearCache() {
-  try {
-    for (let i = sessionStorage.length - 1; i >= 0; i--) {
-      const k = sessionStorage.key(i)
-      if (k && k.startsWith(PREFIX)) sessionStorage.removeItem(k)
-    }
-  } catch {
-    // abaikan
-  }
-}
+export { readCache, writeCache, clearCache } from '../cacheStore.js'
 
 // Reads `path` through the session cache. `scope` (e.g. user id) keeps users apart in one tab.
 // Cached data is shown without refetching; `refresh()` or a non-zero `bust` forces a network fetch.
