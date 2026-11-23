@@ -1,14 +1,30 @@
 import { useState } from 'react';
-import { Star, Send, CheckCircle2 } from 'lucide-react';
-import { LAYANAN, validateFeedback } from '../feedback/validateFeedback';
+import { Star, Send, CheckCircle2, ChevronDown } from 'lucide-react';
+import { LAYANAN, SUMBER, validateFeedback } from '../feedback/validateFeedback';
 import { useDocumentTitle } from '../lib/useDocumentTitle';
 import { FEEDBACK_TITLE } from '../feedback/feedbackMeta';
 
-const EMPTY = { rating: 0, layanan: '', bagus: '', kurang: '', nama: '', izin_testimoni: false, website: '' };
+const EMPTY = { rating: 0, layanan: '', sumber: '', bagus: '', kurang: '', nama: '', izin_testimoni: false, website: '' };
 const RATING_LABEL = ['', 'Kecewa', 'Kurang', 'Cukup', 'Puas', 'Sangat puas'];
 
 const inputClass =
   'w-full rounded-xl border border-gray-300 px-4 py-3 text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500';
+
+// appearance-none menghapus panah bawaan browser yang mepet ke tepi; ikon diganti ChevronDown dengan jarak sendiri.
+const Select = ({ label, placeholder, options, value, onChange }) => (
+  <label className="block">
+    <span className="block text-sm font-semibold text-gray-900 mb-2">{label}</span>
+    <span className="relative block">
+      <select value={value} onChange={onChange} className={`${inputClass} appearance-none pr-12 bg-white`}>
+        <option value="">{placeholder}</option>
+        {options.map((o) => (
+          <option key={o} value={o}>{o}</option>
+        ))}
+      </select>
+      <ChevronDown size={20} aria-hidden="true" className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-gray-500" />
+    </span>
+  </label>
+);
 
 const Feedback = () => {
   useDocumentTitle(FEEDBACK_TITLE);
@@ -83,15 +99,9 @@ const Feedback = () => {
               </div>
             </fieldset>
 
-            <label className="block">
-              <span className="block text-sm font-semibold text-gray-900 mb-2">Layanan yang kamu pakai</span>
-              <select value={data.layanan} onChange={set('layanan')} className={inputClass}>
-                <option value="">Pilih layanan</option>
-                {LAYANAN.map((l) => (
-                  <option key={l} value={l}>{l}</option>
-                ))}
-              </select>
-            </label>
+            <Select label="Layanan yang kamu pakai" placeholder="Pilih layanan" options={LAYANAN} value={data.layanan} onChange={set('layanan')} />
+
+            <Select label="Tahu Jokoding dari mana?" placeholder="Pilih sumber" options={SUMBER} value={data.sumber} onChange={set('sumber')} />
 
             <label className="block">
               <span className="block text-sm font-semibold text-gray-900 mb-2">Apa yang sudah bagus?</span>
@@ -104,7 +114,7 @@ const Feedback = () => {
             </label>
 
             <label className="block">
-              <span className="block text-sm font-semibold text-gray-900 mb-2">Nama (boleh dikosongkan)</span>
+              <span className="block text-sm font-semibold text-gray-900 mb-2">Nama <span className="font-normal text-gray-500">(opsional)</span></span>
               <input type="text" autoComplete="given-name" value={data.nama} onChange={set('nama')} placeholder="Nama panggilanmu" className={inputClass} />
             </label>
 

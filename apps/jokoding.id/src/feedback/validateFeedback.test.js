@@ -5,7 +5,7 @@ describe('validateFeedback', () => {
   it('accepts a minimal feedback and normalizes empty fields to null', () => {
     expect(validateFeedback({ rating: 5, bagus: '  cepat  ' })).toEqual({
       ok: true,
-      value: { rating: 5, layanan: null, bagus: 'cepat', kurang: null, nama: null, izin_testimoni: false },
+      value: { rating: 5, layanan: null, sumber: null, bagus: 'cepat', kurang: null, nama: null, izin_testimoni: false },
     });
   });
 
@@ -21,6 +21,11 @@ describe('validateFeedback', () => {
 
   it('rejects an unknown service', () => {
     expect(validateFeedback({ rating: 4, layanan: 'Hacking', kurang: 'x' }).ok).toBe(false);
+  });
+
+  it('accepts a known source and rejects an unknown one', () => {
+    expect(validateFeedback({ rating: 5, sumber: 'TikTok', bagus: 'x' }).value.sumber).toBe('TikTok');
+    expect(validateFeedback({ rating: 5, sumber: 'Koran', bagus: 'x' }).ok).toBe(false);
   });
 
   it('truncates long text and only treats literal true as consent', () => {
