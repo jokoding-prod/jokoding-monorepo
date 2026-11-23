@@ -1,0 +1,31 @@
+# Template: deploy/install.sh fills in __NODE__, __APP_DIR__ and __PORT__.
+[Unit]
+Description=Jokoding Internal API
+After=network.target postgresql.service
+Wants=postgresql.service
+
+[Service]
+ExecStart=__NODE__ __APP_DIR__/apps/internal-api/src/main.js
+WorkingDirectory=__APP_DIR__/apps/internal-api
+# DATABASE_URL, PORT, HOST, CORS_ORIGIN, COOKIE_DOMAIN, TZ, NODE_ENV.
+EnvironmentFile=/etc/jokoding-internal/env
+# Dedicated system user (not DynamicUser): the admin CLI runs as the same user.
+User=jokoding-internal
+Group=jokoding-internal
+Restart=on-failure
+RestartSec=2
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictSUIDSGID=yes
+# Hermes and Postgres share 2 GB RAM: keep the API small.
+MemoryMax=300M
+Environment=NODE_OPTIONS=--max-old-space-size=192
+
+[Install]
+WantedBy=multi-user.target

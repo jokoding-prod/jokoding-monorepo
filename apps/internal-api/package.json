@@ -1,0 +1,16 @@
+{
+  "name": "@jokoding/internal-api",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "start": "node src/main.js",
+    "test": "node --test test/*.test.js"
+  },
+  "dependencies": {
+    "@hono/node-server": "^2.1.8",
+    "@jokoding/invoice-core": "workspace:*",
+    "hono": "^4.13.19",
+    "pg": "^8.23.1"
+  }
+}
