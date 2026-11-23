@@ -9,7 +9,7 @@ import { injectPage } from './lib/injectPage.js';
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const dist = join(root, 'dist');
 
-const { render, getPosts, LANDINGS, landingMeta, blogIndexMeta, postMeta, renderHead, buildSitemap } = await import(
+const { render, getPosts, LANDINGS, landingMeta, blogIndexMeta, postMeta, feedbackMeta, renderHead, buildSitemap } = await import(
   pathToFileURL(join(root, 'dist-server/entry-server.js')).href
 );
 
@@ -18,7 +18,9 @@ const template = await readFile(join(dist, 'index.html'), 'utf8');
 const writePage = async (url, meta) => {
   const file = join(dist, url, 'index.html');
   await mkdir(dirname(file), { recursive: true });
-  await writeFile(file, injectPage(template, { head: renderHead(meta), html: render(url) }));
+  // Halaman dengan robots sendiri (misal noindex) tidak boleh ikut "index, follow" bawaan template.
+  const base = meta.robots ? template.replace(/\s*<meta name="robots"[^>]*>/, '') : template;
+  await writeFile(file, injectPage(base, { head: renderHead(meta), html: render(url) }));
   console.log(`prerender: ${file.replace(`${root}/`, '')}`);
 };
 
@@ -35,6 +37,7 @@ for (const landing of LANDINGS) {
   await writePage(landing.path, landingMeta(landing));
 }
 await writePage('/blog', blogIndexMeta());
+await writePage('/feedback', feedbackMeta());
 for (const post of posts) {
   await writePage(`/blog/${post.slug}`, postMeta(post));
 }

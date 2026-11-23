@@ -8,6 +8,7 @@ import Footer from './components/Footer';
 import Home from './pages/Home';
 import BlogIndex from './pages/BlogIndex';
 import BlogPost from './pages/BlogPost';
+import Feedback from './pages/Feedback';
 import ServiceLanding from './pages/ServiceLanding';
 import { LANDINGS } from './landing/landings';
 import { OrderFormProvider } from './order/OrderFormProvider';
@@ -33,6 +34,7 @@ function App() {
           <Route key={l.path} path={l.path} element={<ServiceLanding landing={l} />} />
         ))}
         <Route path="/blog" element={<BlogIndex />} />
+        <Route path="/feedback" element={<Feedback />} />
         <Route path="/blog/:slug" element={<BlogPost />} />
       </Routes>
       <Footer />

@@ -77,6 +77,7 @@ export const renderHead = (meta) =>
   [
     `<title>${escapeHtml(meta.title)}</title>`,
     metaTag('name', 'description', meta.description),
+    ...(meta.robots ? [metaTag('name', 'robots', meta.robots)] : []),
     `<link rel="canonical" href="${escapeHtml(meta.canonical)}" />`,
     metaTag('property', 'og:type', meta.type),
     metaTag('property', 'og:url', meta.canonical),
@@ -89,5 +90,5 @@ export const renderHead = (meta) =>
     metaTag('name', 'twitter:title', meta.title),
     metaTag('name', 'twitter:description', meta.description),
     metaTag('name', 'twitter:image', meta.image),
-    `<script type="application/ld+json">${JSON.stringify(meta.jsonLd).replace(/</g, '\\u003c')}</script>`,
+    ...(meta.jsonLd ? [`<script type="application/ld+json">${JSON.stringify(meta.jsonLd).replace(/</g, '\\u003c')}</script>`] : []),
   ].join('\n    ');
